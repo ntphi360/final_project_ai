@@ -5,8 +5,8 @@ from alembic import context
 from app.database.base import Base
 from app.database.database import engine
 
-# Import model để Alembic nhận diện bảng
-from app.models.case import Case
+# Import models để Alembic nhận diện đầy đủ các bảng
+from app.models import Case, Department, DepartmentField, Field, Procedure
 
 
 config = context.config

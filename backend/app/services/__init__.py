@@ -4,6 +4,13 @@ from app.services.case_service import (
     getCompletedCases,
     getProcessingCases,
 )
+from app.services.catalog_service import (
+    getDepartments,
+    getFields,
+    getFieldsByDepartment,
+    getProcedures,
+    getProceduresByField,
+)
 from app.services.import_case_service import importCases
 
 __all__ = [
@@ -12,4 +19,9 @@ __all__ = [
     "getProcessingCases",
     "getCompletedCases",
     "importCases",
+    "getDepartments",
+    "getFields",
+    "getProcedures",
+    "getProceduresByField",
+    "getFieldsByDepartment",
 ]
