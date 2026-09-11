@@ -12,6 +12,14 @@ from app.services.catalog_service import (
     getProceduresByField,
 )
 from app.services.import_case_service import importCases
+from app.services.officer_service import (
+    assignOfficerToField,
+    getFieldsByOfficer,
+    getOfficerById,
+    getOfficers,
+    getOfficersByField,
+    removeOfficerFromField,
+)
 
 __all__ = [
     "getCases",
@@ -24,4 +32,10 @@ __all__ = [
     "getProcedures",
     "getProceduresByField",
     "getFieldsByDepartment",
+    "getOfficers",
+    "getOfficerById",
+    "getOfficersByField",
+    "getFieldsByOfficer",
+    "assignOfficerToField",
+    "removeOfficerFromField",
 ]

@@ -5,6 +5,7 @@ from app.database.database import engine
 from app.routers.catalog import router as catalogRouter
 from app.routers.case import router as caseRouter
 from app.routers.import_case import router as importCaseRouter
+from app.routers.officer import router as officerRouter
 
 app = FastAPI(
     title="AI Case Monitoring API",
@@ -14,6 +15,7 @@ app = FastAPI(
 app.include_router(caseRouter)
 app.include_router(importCaseRouter)
 app.include_router(catalogRouter)
+app.include_router(officerRouter)
 
 
 @app.get("/")

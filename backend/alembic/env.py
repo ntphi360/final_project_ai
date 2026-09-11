@@ -6,7 +6,15 @@ from app.database.base import Base
 from app.database.database import engine
 
 # Import models để Alembic nhận diện đầy đủ các bảng
-from app.models import Case, Department, DepartmentField, Field, Procedure
+from app.models import (
+    Case,
+    Department,
+    DepartmentField,
+    Field,
+    Officer,
+    OfficerField,
+    Procedure,
+)
 
 
 config = context.config
