@@ -3,6 +3,7 @@ from sqlalchemy import text
 
 from app.database.database import engine
 from app.routers.case import router as caseRouter
+from app.routers.import_case import router as importCaseRouter
 
 app = FastAPI(
     title="AI Case Monitoring API",
@@ -10,6 +11,7 @@ app = FastAPI(
 )
 
 app.include_router(caseRouter)
+app.include_router(importCaseRouter)
 
 
 @app.get("/")
