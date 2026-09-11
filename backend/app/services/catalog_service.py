@@ -10,7 +10,7 @@ from app.models.procedure import Procedure
 def getDepartments(db: Session) -> list[Department]:
     statement = (
         select(Department)
-        .where(Department.is_active.is_(True))
+        .where(Department.is_active == 1)
         .order_by(Department.name, Department.id)
     )
     return list(db.scalars(statement).all())
@@ -19,7 +19,7 @@ def getDepartments(db: Session) -> list[Department]:
 def getFields(db: Session) -> list[Field]:
     statement = (
         select(Field)
-        .where(Field.is_active.is_(True))
+        .where(Field.is_active == 1)
         .order_by(Field.name, Field.id)
     )
     return list(db.scalars(statement).all())
@@ -28,7 +28,7 @@ def getFields(db: Session) -> list[Field]:
 def getProcedures(db: Session) -> list[Procedure]:
     statement = (
         select(Procedure)
-        .where(Procedure.is_active.is_(True))
+        .where(Procedure.is_active == 1)
         .order_by(Procedure.name, Procedure.id)
     )
     return list(db.scalars(statement).all())
@@ -40,7 +40,7 @@ def getProceduresByField(
 ) -> list[Procedure] | None:
     fieldStatement = select(Field.id).where(
         Field.id == fieldId,
-        Field.is_active.is_(True),
+        Field.is_active == 1,
     )
     if db.scalar(fieldStatement) is None:
         return None
@@ -49,7 +49,7 @@ def getProceduresByField(
         select(Procedure)
         .where(
             Procedure.field_id == fieldId,
-            Procedure.is_active.is_(True),
+            Procedure.is_active == 1,
         )
         .order_by(Procedure.name, Procedure.id)
     )
@@ -62,7 +62,7 @@ def getFieldsByDepartment(
 ) -> list[Field] | None:
     departmentStatement = select(Department.id).where(
         Department.id == departmentId,
-        Department.is_active.is_(True),
+        Department.is_active == 1,
     )
     if db.scalar(departmentStatement) is None:
         return None
@@ -75,7 +75,7 @@ def getFieldsByDepartment(
         )
         .where(
             DepartmentField.department_id == departmentId,
-            Field.is_active.is_(True),
+            Field.is_active == 1,
         )
         .order_by(Field.name, Field.id)
     )

@@ -21,17 +21,22 @@ class OfficerFieldNotFoundError(Exception):
 def getOfficers(db: Session) -> list[Officer]:
     statement = (
         select(Officer)
-        .where(Officer.is_active.is_(True))
+        .where(Officer.is_active == 1)
         .order_by(Officer.full_name, Officer.id)
     )
+
     return list(db.scalars(statement).all())
 
 
-def getOfficerById(db: Session, officerId: int) -> Officer | None:
+def getOfficerById(
+    db: Session,
+    officerId: int,
+) -> Officer | None:
     statement = select(Officer).where(
         Officer.id == officerId,
-        Officer.is_active.is_(True),
+        Officer.is_active == 1,
     )
+
     return db.scalar(statement)
 
 
@@ -50,10 +55,11 @@ def getOfficersByField(
         )
         .where(
             OfficerField.field_id == fieldId,
-            Officer.is_active.is_(True),
+            Officer.is_active == 1,
         )
         .order_by(Officer.full_name, Officer.id)
     )
+
     return list(db.scalars(statement).all())
 
 
@@ -69,10 +75,11 @@ def getFieldsByOfficer(
         )
         .where(
             OfficerField.officer_id == officerId,
-            Field.is_active.is_(True),
+            Field.is_active == 1,
         )
         .order_by(Field.name, Field.id)
     )
+
     return list(db.scalars(statement).all())
 
 
@@ -87,7 +94,11 @@ def assignOfficerToField(
         fieldId=fieldId,
     )
 
-    assignment = db.get(OfficerField, (officerId, fieldId))
+    assignment = db.get(
+        OfficerField,
+        (officerId, fieldId),
+    )
+
     if assignment is not None:
         return assignment
 
@@ -95,9 +106,11 @@ def assignOfficerToField(
         officer_id=officerId,
         field_id=fieldId,
     )
+
     db.add(assignment)
     db.commit()
     db.refresh(assignment)
+
     return assignment
 
 
@@ -112,7 +125,11 @@ def removeOfficerFromField(
         fieldId=fieldId,
     )
 
-    assignment = db.get(OfficerField, (officerId, fieldId))
+    assignment = db.get(
+        OfficerField,
+        (officerId, fieldId),
+    )
+
     if assignment is None:
         raise OfficerFieldNotFoundError
 
@@ -120,11 +137,15 @@ def removeOfficerFromField(
     db.commit()
 
 
-def _getActiveFieldById(db: Session, fieldId: int) -> Field | None:
+def _getActiveFieldById(
+    db: Session,
+    fieldId: int,
+) -> Field | None:
     statement = select(Field).where(
         Field.id == fieldId,
-        Field.is_active.is_(True),
+        Field.is_active == 1,
     )
+
     return db.scalar(statement)
 
 
@@ -133,7 +154,14 @@ def _validateActiveOfficerAndField(
     officerId: int,
     fieldId: int,
 ) -> None:
-    if getOfficerById(db=db, officerId=officerId) is None:
+    if getOfficerById(
+        db=db,
+        officerId=officerId,
+    ) is None:
         raise OfficerNotFoundError
-    if _getActiveFieldById(db=db, fieldId=fieldId) is None:
+
+    if _getActiveFieldById(
+        db=db,
+        fieldId=fieldId,
+    ) is None:
         raise FieldNotFoundError
