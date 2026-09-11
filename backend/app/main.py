@@ -2,11 +2,14 @@ from fastapi import FastAPI
 from sqlalchemy import text
 
 from app.database.database import engine
+from app.routers.case import router as caseRouter
 
 app = FastAPI(
     title="AI Case Monitoring API",
     version="1.0.0"
 )
+
+app.include_router(caseRouter)
 
 
 @app.get("/")
