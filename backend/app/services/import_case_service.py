@@ -1,9 +1,10 @@
 import importlib.util
 import re
-from zipfile import BadZipFile
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 from typing import Any, BinaryIO
+from zipfile import BadZipFile
 
 import pandas as pd
 from fastapi import UploadFile
@@ -37,6 +38,7 @@ COLUMN_MAPPING = {
     "Trạng thái hồ sơ": "status",
 }
 
+
 REQUIRED_COLUMNS = (
     "Số hồ sơ",
     "Tên thủ tục hành chính",
@@ -47,6 +49,7 @@ REQUIRED_COLUMNS = (
     "Trạng thái hồ sơ",
 )
 
+
 REQUIRED_TEXT_FIELDS = (
     "case_code",
     "procedure_name",
@@ -54,6 +57,7 @@ REQUIRED_TEXT_FIELDS = (
     "department_name",
     "status",
 )
+
 
 TEXT_FIELDS = (
     "case_code",
@@ -65,6 +69,14 @@ TEXT_FIELDS = (
     "officer_name",
     "status",
 )
+
+
+DATETIME_FIELDS = (
+    "received_at",
+    "deadline_at",
+    "completed_at",
+)
+
 
 TEXT_LENGTH_LIMITS = {
     "case_code": 100,
@@ -89,75 +101,96 @@ class ImportCaseDatabaseError(Exception):
     pass
 
 
+def normalizeUnicode(value: Any) -> str:
+    return unicodedata.normalize("NFC", str(value))
+
+
 def normalizeColumnName(value: Any) -> str:
-    return re.sub(r"\s+", " ", str(value)).strip()
+    value = normalizeUnicode(value)
+    return re.sub(r"\s+", " ", value).strip()
 
 
-def normalizeText(value: Any) -> str | None:
+def normalizeTextValue(value: Any) -> str | None:
     if value is None or pd.isna(value):
         return None
 
-    normalized = re.sub(r"\s+", " ", str(value)).strip()
-    return normalized or None
+    value = normalizeUnicode(value)
+
+    value = re.sub(
+        r"\s+",
+        " ",
+        value,
+    ).strip()
+
+    return value or None
 
 
 def normalizePhoneNumber(value: Any) -> str | None:
     if value is None or pd.isna(value):
         return None
 
-    if isinstance(value, bool):
-        return str(value)
+    if isinstance(value, float) and value.is_integer():
+        value = str(int(value))
+    else:
+        value = str(value)
 
-    if isinstance(value, int):
-        return str(value)
+    value = re.sub(
+        r"\s+",
+        "",
+        value,
+    ).strip()
 
-    if isinstance(value, float):
-        if value.is_integer():
-            return str(int(value))
-        return format(value, "f").rstrip("0").rstrip(".")
+    if re.fullmatch(r"[+-]?\d+\.0+", value):
+        value = value[: value.index(".")]
 
-    normalized = re.sub(r"\s+", "", str(value).strip())
-    if re.fullmatch(r"[+-]?\d+\.0+", normalized):
-        normalized = normalized[: normalized.index(".")]
-    return normalized or None
-
-
-def parseDateTime(value: Any, required: bool) -> datetime | None:
-    if value is None or pd.isna(value) or normalizeText(value) is None:
-        if required:
-            raise ValueError("Thiếu datetime bắt buộc")
-        return None
-
-    parsed = pd.to_datetime(value, dayfirst=True, errors="coerce")
-    if pd.isna(parsed):
-        raise ValueError("Datetime không hợp lệ")
-
-    if isinstance(parsed, pd.Timestamp):
-        return parsed.to_pydatetime()
-    if isinstance(parsed, datetime):
-        return parsed
-    raise ValueError("Datetime không hợp lệ")
+    return value or None
 
 
-def readUploadedFile(file: UploadFile) -> pd.DataFrame:
-    extension = Path(file.filename or "").suffix.lower()
-    supportedExtensions = {".csv", ".xlsx"}
+def readUploadedFile(
+    file: UploadFile,
+) -> pd.DataFrame:
 
-    if extension == ".xls" and importlib.util.find_spec("xlrd") is None:
+    extension = Path(
+        file.filename or ""
+    ).suffix.lower()
+
+    if (
+        extension == ".xls"
+        and importlib.util.find_spec("xlrd") is None
+    ):
         raise ImportCaseValidationError(
-            "Định dạng .xls chưa được hỗ trợ trong môi trường hiện tại; vui lòng dùng CSV hoặc XLSX"
+            "Định dạng .xls chưa được hỗ trợ; "
+            "vui lòng sử dụng CSV hoặc XLSX"
         )
 
-    if extension not in supportedExtensions and extension != ".xls":
-        raise ImportCaseValidationError("Chỉ hỗ trợ file CSV hoặc Excel")
+    if extension not in {
+        ".csv",
+        ".xlsx",
+        ".xls",
+    }:
+        raise ImportCaseValidationError(
+            "Chỉ hỗ trợ file CSV hoặc Excel"
+        )
 
     try:
         file.file.seek(0)
+
         source: BinaryIO = file.file
+
         if extension == ".csv":
-            dataFrame = pd.read_csv(source, dtype=str, keep_default_na=False)
+            dataFrame = pd.read_csv(
+                source,
+                dtype=str,
+                keep_default_na=False,
+                encoding="utf-8-sig",
+            )
+
         else:
-            dataFrame = pd.read_excel(source, dtype=object)
+            dataFrame = pd.read_excel(
+                source,
+                dtype=object,
+            )
+
     except (
         BadZipFile,
         ImportError,
@@ -168,26 +201,47 @@ def readUploadedFile(file: UploadFile) -> pd.DataFrame:
         pd.errors.ParserError,
     ) as exc:
         raise ImportCaseValidationError(
-            "Không thể đọc file CSV hoặc Excel; vui lòng kiểm tra định dạng file"
+            "Không thể đọc file CSV hoặc Excel; "
+            "vui lòng kiểm tra định dạng file"
         ) from exc
 
     if dataFrame.empty and len(dataFrame.columns) == 0:
-        raise ImportCaseValidationError("File không có dữ liệu hoặc không có header")
+        raise ImportCaseValidationError(
+            "File không có dữ liệu hoặc header"
+        )
 
     return dataFrame
 
 
-def normalizeAndValidateColumns(dataFrame: pd.DataFrame) -> pd.DataFrame:
-    normalizedColumns = [normalizeColumnName(column) for column in dataFrame.columns]
-    dataFrame = dataFrame.copy()
-    dataFrame.columns = normalizedColumns
+def prepareDataFrame(
+    dataFrame: pd.DataFrame,
+) -> pd.DataFrame:
 
-    # Nếu header sau khi chuẩn hóa bị trùng, cột xuất hiện sau cùng được ưu tiên.
-    dataFrame = dataFrame.loc[:, ~dataFrame.columns.duplicated(keep="last")]
+    dataFrame = dataFrame.copy()
+
+    # ================================
+    # Chuẩn hóa tên cột
+    # ================================
+
+    dataFrame.columns = [
+        normalizeColumnName(column)
+        for column in dataFrame.columns
+    ]
+
+    # Nếu header trùng thì lấy cột sau cùng.
+    dataFrame = dataFrame.loc[
+        :,
+        ~dataFrame.columns.duplicated(
+            keep="last"
+        ),
+    ]
 
     missingColumns = [
-        column for column in REQUIRED_COLUMNS if column not in dataFrame.columns
+        column
+        for column in REQUIRED_COLUMNS
+        if column not in dataFrame.columns
     ]
+
     if missingColumns:
         raise ImportCaseValidationError(
             {
@@ -196,61 +250,201 @@ def normalizeAndValidateColumns(dataFrame: pd.DataFrame) -> pd.DataFrame:
             }
         )
 
+    # ================================
+    # Rename cột bằng Pandas
+    # ================================
+
     availableMapping = {
         source: target
         for source, target in COLUMN_MAPPING.items()
         if source in dataFrame.columns
     }
-    return dataFrame.rename(columns=availableMapping)[list(availableMapping.values())]
+
+    dataFrame = dataFrame.rename(
+        columns=availableMapping
+    )
+
+    dataFrame = dataFrame[
+        list(availableMapping.values())
+    ].copy()
+
+    # ================================
+    # Chuẩn hóa các cột text
+    # ================================
+
+    for column in TEXT_FIELDS:
+        if column in dataFrame.columns:
+            dataFrame[column] = (
+                dataFrame[column]
+                .map(normalizeTextValue)
+            )
+
+    # ================================
+    # Số điện thoại
+    # ================================
+
+    if "phone_number" in dataFrame.columns:
+        dataFrame["phone_number"] = (
+            dataFrame["phone_number"]
+            .map(normalizePhoneNumber)
+        )
+
+    # ================================
+    # Datetime bằng Pandas
+    # ================================
+
+    for column in DATETIME_FIELDS:
+
+        if column not in dataFrame.columns:
+            dataFrame[column] = pd.NaT
+            continue
+
+        dataFrame[column] = pd.to_datetime(
+            dataFrame[column],
+            dayfirst=True,
+            errors="coerce",
+        )
+
+    # ================================
+    # Validate text bắt buộc
+    # ================================
+
+    invalidRequiredText = (
+        dataFrame[
+            list(REQUIRED_TEXT_FIELDS)
+        ]
+        .isna()
+        .any(axis=1)
+    )
+
+    # ================================
+    # Validate datetime bắt buộc
+    # ================================
+
+    invalidDateTime = (
+        dataFrame["received_at"].isna()
+        | dataFrame["deadline_at"].isna()
+    )
+
+    # ================================
+    # Validate độ dài
+    # ================================
+
+    invalidLength = pd.Series(
+        False,
+        index=dataFrame.index,
+    )
+
+    for column, maxLength in (
+        TEXT_LENGTH_LIMITS.items()
+    ):
+        if column not in dataFrame.columns:
+            continue
+
+        invalidLength |= (
+            dataFrame[column]
+            .fillna("")
+            .astype(str)
+            .str.len()
+            .gt(maxLength)
+        )
+
+    # Dòng nào lỗi thì loại khỏi DataFrame.
+    dataFrame["_has_error"] = (
+        invalidRequiredText
+        | invalidDateTime
+        | invalidLength
+    )
+
+    return dataFrame
 
 
-def convertRow(row: pd.Series) -> dict[str, Any]:
-    caseData: dict[str, Any] = {}
+def getExistingCases(
+    db: Session,
+    caseCodes: list[str],
+) -> dict[str, Case]:
 
-    for field in TEXT_FIELDS:
-        caseData[field] = normalizeText(row.get(field))
-
-    caseData["phone_number"] = normalizePhoneNumber(row.get("phone_number"))
-    caseData["received_at"] = parseDateTime(row.get("received_at"), required=True)
-    caseData["deadline_at"] = parseDateTime(row.get("deadline_at"), required=True)
-    caseData["completed_at"] = parseDateTime(row.get("completed_at"), required=False)
-
-    if any(caseData[field] is None for field in REQUIRED_TEXT_FIELDS):
-        raise ValueError("Thiếu dữ liệu text bắt buộc")
-
-    for field, maxLength in TEXT_LENGTH_LIMITS.items():
-        value = caseData.get(field)
-        if value is not None and len(value) > maxLength:
-            raise ValueError(f"Dữ liệu {field} vượt quá {maxLength} ký tự")
-
-    return caseData
-
-
-def getExistingCases(db: Session, caseCodes: list[str]) -> dict[str, Case]:
     existingCases: dict[str, Case] = {}
+
     chunkSize = 1000
 
-    for start in range(0, len(caseCodes), chunkSize):
-        chunk = caseCodes[start : start + chunkSize]
-        statement = select(Case).where(Case.case_code.in_(chunk))
-        existingCases.update({case.case_code: case for case in db.scalars(statement)})
+    for start in range(
+        0,
+        len(caseCodes),
+        chunkSize,
+    ):
+
+        chunk = caseCodes[
+            start : start + chunkSize
+        ]
+
+        statement = select(Case).where(
+            Case.case_code.in_(chunk)
+        )
+
+        for case in db.scalars(statement):
+            existingCases[
+                case.case_code
+            ] = case
 
     return existingCases
 
 
-def importCases(db: Session, file: UploadFile) -> ImportCaseResult:
-    dataFrame = normalizeAndValidateColumns(readUploadedFile(file))
-    totalRecords = len(dataFrame.index)
-    errorRecords = 0
-    recordsByCaseCode: dict[str, dict[str, Any]] = {}
+def importCases(
+    db: Session,
+    file: UploadFile,
+) -> ImportCaseResult:
 
-    for _, row in dataFrame.iterrows():
-        try:
-            caseData = convertRow(row)
-            # Gán lại cùng key để record xuất hiện sau cùng trong file được ưu tiên.
-            recordsByCaseCode[caseData["case_code"]] = caseData
-        except (TypeError, ValueError):
-            errorRecords += 1
+    # ================================
+    # Pandas đọc + xử lý file
+    # ================================
+
+    dataFrame = readUploadedFile(file)
+
+    dataFrame = prepareDataFrame(
+        dataFrame
+    )
+
+    totalRecords = len(dataFrame)
+
+    errorRecords = int(
+        dataFrame["_has_error"].sum()
+    )
+
+    # Chỉ giữ record hợp lệ.
+    validDataFrame = (
+        dataFrame[
+            ~dataFrame["_has_error"]
+        ]
+        .drop(
+            columns=["_has_error"]
+        )
+        .copy()
+    )
+
+    # Nếu cùng case_code xuất hiện nhiều lần,
+    # lấy record cuối cùng.
+    validDataFrame = (
+        validDataFrame
+        .drop_duplicates(
+            subset=["case_code"],
+            keep="last",
+        )
+    )
+
+    # NaN / NaT -> None cho SQLAlchemy.
+    validDataFrame = validDataFrame.astype(
+        object
+    )
+
+    validDataFrame = validDataFrame.where(
+        pd.notna(validDataFrame),
+        None,
+    )
+
+    records = validDataFrame.to_dict(
+        orient="records"
+    )
 
     insertedRecords = 0
     updatedRecords = 0
@@ -260,72 +454,176 @@ def importCases(db: Session, file: UploadFile) -> ImportCaseResult:
     fieldMismatchRecords = 0
 
     try:
-        existingCases = getExistingCases(db, list(recordsByCaseCode))
-        relationLookups = loadCaseRelationLookups(db)
+
+        caseCodes = [
+            record["case_code"]
+            for record in records
+        ]
+
+        existingCases = getExistingCases(
+            db,
+            caseCodes,
+        )
+
+        relationLookups = (
+            loadCaseRelationLookups(db)
+        )
+
         now = datetime.now()
 
-        for caseCode, caseData in recordsByCaseCode.items():
+        # ================================
+        # Lưu DB
+        # ================================
+
+        for caseData in records:
+
             procedure = resolveProcedure(
                 relationLookups,
-                procedureName=caseData["procedure_name"],
-                fieldName=caseData["field_name"],
+                procedureName=caseData[
+                    "procedure_name"
+                ],
+                fieldName=caseData[
+                    "field_name"
+                ],
             )
+
             department = resolveDepartment(
                 relationLookups,
-                departmentName=caseData["department_name"],
+                departmentName=caseData[
+                    "department_name"
+                ],
             )
+
             officer = resolveOfficer(
                 relationLookups,
-                officerName=caseData["officer_name"],
+                officerName=caseData.get(
+                    "officer_name"
+                ),
             )
+
+            # ================================
+            # FK
+            # ================================
 
             caseData["procedure_id"] = (
-                procedure.id if procedure is not None else None
-            )
-            caseData["department_id"] = (
-                department.id if department is not None else None
-            )
-            caseData["officer_id"] = (
-                officer.id if officer is not None else None
+                procedure.id
+                if procedure is not None
+                else None
             )
 
+            caseData["department_id"] = (
+                department.id
+                if department is not None
+                else None
+            )
+
+            caseData["officer_id"] = (
+                officer.id
+                if officer is not None
+                else None
+            )
+
+            # ================================
+            # Kiểm tra mapping
+            # ================================
+
             officerExpected = (
-                normalizeRelationText(caseData["officer_name"])
+                normalizeRelationText(
+                    caseData.get(
+                        "officer_name"
+                    )
+                )
                 is not None
             )
+
             if (
                 procedure is None
                 or department is None
-                or (officerExpected and officer is None)
+                or (
+                    officerExpected
+                    and officer is None
+                )
             ):
                 unmappedRelationRecords += 1
 
+            # ================================
+            # Kiểm tra field mismatch
+            # ================================
+
             if (
                 procedure is not None
-                and normalizeRelationText(caseData["field_name"])
-                != normalizeRelationText(procedure.field.name)
+                and normalizeRelationText(
+                    caseData["field_name"]
+                )
+                != normalizeRelationText(
+                    procedure.field.name
+                )
             ):
                 fieldMismatchRecords += 1
 
-            existingCase = existingCases.get(caseCode)
+            # ================================
+            # Insert / Update
+            # ================================
+
+            caseCode = caseData[
+                "case_code"
+            ]
+
+            existingCase = (
+                existingCases.get(caseCode)
+            )
+
             if existingCase is None:
-                db.add(Case(**caseData))
+
+                newCase = Case(
+                    **caseData
+                )
+
+                db.add(newCase)
+
+                existingCases[
+                    caseCode
+                ] = newCase
+
                 insertedRecords += 1
+
             else:
-                for field, value in caseData.items():
-                    setattr(existingCase, field, value)
+
+                for field, value in (
+                    caseData.items()
+                ):
+                    setattr(
+                        existingCase,
+                        field,
+                        value,
+                    )
+
                 existingCase.updated_at = now
+
                 updatedRecords += 1
 
-            if caseData["completed_at"] is None:
+            # ================================
+            # Thống kê
+            # ================================
+
+            if (
+                caseData["completed_at"]
+                is None
+            ):
                 processingRecords += 1
             else:
                 completedRecords += 1
 
         db.commit()
+
     except SQLAlchemyError as exc:
+
         db.rollback()
-        raise ImportCaseDatabaseError("Không thể lưu dữ liệu hồ sơ vào database") from exc
+
+        raise ImportCaseDatabaseError(
+            "Không thể lưu dữ liệu hồ sơ "
+            "vào database"
+        ) from exc
 
     return ImportCaseResult(
         total_records=totalRecords,
@@ -334,6 +632,10 @@ def importCases(db: Session, file: UploadFile) -> ImportCaseResult:
         error_records=errorRecords,
         completed_records=completedRecords,
         processing_records=processingRecords,
-        unmapped_relation_records=unmappedRelationRecords,
-        field_mismatch_records=fieldMismatchRecords,
+        unmapped_relation_records=(
+            unmappedRelationRecords
+        ),
+        field_mismatch_records=(
+            fieldMismatchRecords
+        ),
     )
