@@ -1,0 +1,127 @@
+# =========================================================
+# Python
+# =========================================================
+
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Python virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python cache / tools
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Build
+build/
+dist/
+*.egg-info/
+.eggs/
+
+
+# =========================================================
+# Backend specific
+# =========================================================
+
+backend/**/__pycache__/
+backend/**/*.pyc
+backend/.venv/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+!backend/.env.example
+
+# Temporary uploads/files
+backend/uploads/
+backend/temp/
+backend/tmp/
+
+
+# =========================================================
+# Node / React / Vite
+# =========================================================
+
+node_modules/
+frontend/node_modules/
+
+dist/
+frontend/dist/
+
+.vite/
+frontend/.vite/
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+package-lock.json.*
+yarn.lock.*
+pnpm-lock.yaml.*
+
+
+# =========================================================
+# IDE
+# =========================================================
+
+.idea/
+.vscode/
+
+*.iml
+
+# Visual Studio
+.vs/
+
+
+# =========================================================
+# Operating system
+# =========================================================
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+
+# =========================================================
+# Logs
+# =========================================================
+
+*.log
+logs/
+
+
+# =========================================================
+# Jupyter
+# =========================================================
+
+.ipynb_checkpoints/
+
+
+# =========================================================
+# Database temporary files
+# =========================================================
+
+*.sqlite
+*.sqlite3
+*.db
+
+
+# =========================================================
+# Misc temp files
+# =========================================================
+
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
