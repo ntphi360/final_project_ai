@@ -1,5 +1,5 @@
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.models.case import Case
 
@@ -15,7 +15,15 @@ def getCases(db: Session, skip: int = 0, limit: int = 20) -> list[Case]:
 
 
 def getCaseById(db: Session, caseId: int) -> Case | None:
-    statement = select(Case).where(Case.id == caseId)
+    statement = (
+        select(Case)
+        .options(
+            joinedload(Case.procedure),
+            joinedload(Case.department),
+            joinedload(Case.officer),
+        )
+        .where(Case.id == caseId)
+    )
     return db.scalar(statement)
 
 

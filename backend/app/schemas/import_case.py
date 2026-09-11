@@ -8,3 +8,5 @@ class ImportCaseResult(BaseModel):
     error_records: int
     completed_records: int
     processing_records: int
+    unmapped_relation_records: int = 0
+    field_mismatch_records: int = 0

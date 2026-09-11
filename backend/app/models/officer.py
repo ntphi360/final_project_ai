@@ -48,3 +48,6 @@ class Officer(Base):
     officer_assignments: Mapped[list[OfficerField]] = relationship(
         back_populates="officer",
     )
+    cases: Mapped[list[Case]] = relationship(
+        back_populates="officer",
+    )

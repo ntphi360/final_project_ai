@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 from datetime import datetime
 
-from sqlalchemy import DateTime, Integer, String, Unicode
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Unicode
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
 
@@ -13,6 +15,36 @@ class Case(Base):
         Integer,
         primary_key=True,
         autoincrement=True
+    )
+
+    procedure_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey(
+            "procedures.id",
+            name="fk_cases_procedure_id",
+        ),
+        nullable=True,
+        index=True,
+    )
+
+    department_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey(
+            "departments.id",
+            name="fk_cases_department_id",
+        ),
+        nullable=True,
+        index=True,
+    )
+
+    officer_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey(
+            "officers.id",
+            name="fk_cases_officer_id",
+        ),
+        nullable=True,
+        index=True,
     )
 
     case_code: Mapped[str] = mapped_column(
@@ -88,4 +120,14 @@ class Case(Base):
         default=datetime.now,
         onupdate=datetime.now,
         nullable=False
+    )
+
+    procedure: Mapped[Procedure | None] = relationship(
+        back_populates="cases",
+    )
+    department: Mapped[Department | None] = relationship(
+        back_populates="cases",
+    )
+    officer: Mapped[Officer | None] = relationship(
+        back_populates="cases",
     )

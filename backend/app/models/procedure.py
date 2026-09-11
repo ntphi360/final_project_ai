@@ -58,3 +58,6 @@ class Procedure(Base):
     field: Mapped[Field] = relationship(
         back_populates="procedures",
     )
+    cases: Mapped[list[Case]] = relationship(
+        back_populates="procedure",
+    )

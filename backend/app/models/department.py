@@ -41,3 +41,6 @@ class Department(Base):
     department_fields: Mapped[list[DepartmentField]] = relationship(
         back_populates="department",
     )
+    cases: Mapped[list[Case]] = relationship(
+        back_populates="department",
+    )

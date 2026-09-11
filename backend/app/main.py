@@ -9,7 +9,7 @@ from app.routers.import_case import router as importCaseRouter
 from app.routers.officer import router as officerRouter
 
 app = FastAPI(
-    title="AI Case Monitoring API",
+    title="Case Monitoring API",
     version="1.0.0"
 )
 

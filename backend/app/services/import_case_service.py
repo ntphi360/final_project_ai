@@ -13,6 +13,13 @@ from sqlalchemy.orm import Session
 
 from app.models.case import Case
 from app.schemas.import_case import ImportCaseResult
+from app.services.case_relation_service import (
+    loadCaseRelationLookups,
+    normalizeRelationText,
+    resolveDepartment,
+    resolveOfficer,
+    resolveProcedure,
+)
 
 
 COLUMN_MAPPING = {
@@ -249,12 +256,57 @@ def importCases(db: Session, file: UploadFile) -> ImportCaseResult:
     updatedRecords = 0
     completedRecords = 0
     processingRecords = 0
+    unmappedRelationRecords = 0
+    fieldMismatchRecords = 0
 
     try:
         existingCases = getExistingCases(db, list(recordsByCaseCode))
+        relationLookups = loadCaseRelationLookups(db)
         now = datetime.now()
 
         for caseCode, caseData in recordsByCaseCode.items():
+            procedure = resolveProcedure(
+                relationLookups,
+                procedureName=caseData["procedure_name"],
+                fieldName=caseData["field_name"],
+            )
+            department = resolveDepartment(
+                relationLookups,
+                departmentName=caseData["department_name"],
+            )
+            officer = resolveOfficer(
+                relationLookups,
+                officerName=caseData["officer_name"],
+            )
+
+            caseData["procedure_id"] = (
+                procedure.id if procedure is not None else None
+            )
+            caseData["department_id"] = (
+                department.id if department is not None else None
+            )
+            caseData["officer_id"] = (
+                officer.id if officer is not None else None
+            )
+
+            officerExpected = (
+                normalizeRelationText(caseData["officer_name"])
+                is not None
+            )
+            if (
+                procedure is None
+                or department is None
+                or (officerExpected and officer is None)
+            ):
+                unmappedRelationRecords += 1
+
+            if (
+                procedure is not None
+                and normalizeRelationText(caseData["field_name"])
+                != normalizeRelationText(procedure.field.name)
+            ):
+                fieldMismatchRecords += 1
+
             existingCase = existingCases.get(caseCode)
             if existingCase is None:
                 db.add(Case(**caseData))
@@ -282,4 +334,6 @@ def importCases(db: Session, file: UploadFile) -> ImportCaseResult:
         error_records=errorRecords,
         completed_records=completedRecords,
         processing_records=processingRecords,
+        unmapped_relation_records=unmappedRelationRecords,
+        field_mismatch_records=fieldMismatchRecords,
     )

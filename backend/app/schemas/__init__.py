@@ -1,4 +1,10 @@
-from app.schemas.case import CaseDetailResponse, CaseResponse
+from app.schemas.case import (
+    CaseDepartmentResponse,
+    CaseDetailResponse,
+    CaseOfficerResponse,
+    CaseProcedureResponse,
+    CaseResponse,
+)
 from app.schemas.dashboard import (
     DashboardCaseItem,
     DashboardSummaryResponse,
@@ -19,6 +25,9 @@ from app.schemas.procedure import ProcedureResponse
 __all__ = [
     "CaseResponse",
     "CaseDetailResponse",
+    "CaseProcedureResponse",
+    "CaseDepartmentResponse",
+    "CaseOfficerResponse",
     "ImportCaseResult",
     "DepartmentResponse",
     "FieldResponse",

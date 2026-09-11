@@ -4,6 +4,7 @@ from app.services.case_service import (
     getCompletedCases,
     getProcessingCases,
 )
+from app.services.case_relation_service import backfillCaseRelations
 from app.services.catalog_service import (
     getDepartments,
     getFields,
@@ -34,6 +35,7 @@ __all__ = [
     "getCaseById",
     "getProcessingCases",
     "getCompletedCases",
+    "backfillCaseRelations",
     "importCases",
     "getDepartments",
     "getFields",
