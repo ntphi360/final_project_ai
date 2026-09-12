@@ -31,7 +31,7 @@ class Procedure(Base):
         autoincrement=True,
     )
     name: Mapped[str] = mapped_column(
-        Unicode(255),
+        Unicode(500),
         nullable=False,
     )
     field_id: Mapped[int] = mapped_column(
