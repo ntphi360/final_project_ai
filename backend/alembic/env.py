@@ -7,6 +7,7 @@ from app.database.database import engine
 
 # Import models để Alembic nhận diện đầy đủ các bảng
 from app.models import (
+    Assignment,
     Case,
     Department,
     DepartmentField,

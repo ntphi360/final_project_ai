@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from sqlalchemy import text
 
 from app.database.database import engine
+from app.routers.assignment import router as assignmentRouter
 from app.routers.catalog import router as catalogRouter
 from app.routers.case import router as caseRouter
 from app.routers.dashboard import router as dashboardRouter
@@ -18,6 +19,7 @@ app.include_router(importCaseRouter)
 app.include_router(catalogRouter)
 app.include_router(officerRouter)
 app.include_router(dashboardRouter)
+app.include_router(assignmentRouter)
 
 
 @app.get("/")

@@ -133,3 +133,6 @@ class Case(Base):
     officer: Mapped["Officer | None"] = relationship(
         back_populates="cases",
     )
+    assignments: Mapped[list["Assignment"]] = relationship(
+        back_populates="case",
+    )

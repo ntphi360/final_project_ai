@@ -51,3 +51,11 @@ class Officer(Base):
     cases: Mapped[list[Case]] = relationship(
         back_populates="officer",
     )
+    assigned_tasks: Mapped[list["Assignment"]] = relationship(
+        back_populates="assigner",
+        foreign_keys="Assignment.assigner_id",
+    )
+    received_tasks: Mapped[list["Assignment"]] = relationship(
+        back_populates="assignee",
+        foreign_keys="Assignment.assignee_id",
+    )
