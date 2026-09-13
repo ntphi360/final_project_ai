@@ -1,0 +1,118 @@
+import { CheckCircle2, Info, LoaderCircle, Play, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { useSelector } from 'react-redux'
+import ImportDropzone from '../components/data-import/ImportDropzone'
+import ImportErrorModal from '../components/data-import/ImportErrorModal'
+import ImportHistoryDetail from '../components/data-import/ImportHistoryDetail'
+import ImportHistoryTable from '../components/data-import/ImportHistoryTable'
+import ImportSummary from '../components/data-import/ImportSummary'
+import Header from '../components/layout/Header'
+import Sidebar from '../components/layout/Sidebar'
+import { initialImportHistory, mockImportErrors } from '../data/mockImports'
+
+const allowedExtensions = ['.csv', '.xlsx', '.xls']
+const maxFileSize = 20 * 1024 * 1024
+
+export default function DataImport() {
+  const { sidebarCollapsed } = useSelector((state) => state.ui)
+  const timerRef = useRef(null)
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [fileError, setFileError] = useState('')
+  const [processing, setProcessing] = useState(false)
+  const [result, setResult] = useState(null)
+  const [history, setHistory] = useState(initialImportHistory)
+  const [historyPage, setHistoryPage] = useState(1)
+  const [detailId, setDetailId] = useState(null)
+  const [visibleErrors, setVisibleErrors] = useState(null)
+  const [toast, setToast] = useState('')
+
+  const detailItem = history.find((item) => item.id === detailId) || null
+
+  useEffect(() => () => window.clearTimeout(timerRef.current), [])
+
+  useEffect(() => {
+    if (!toast) return undefined
+    const toastTimer = window.setTimeout(() => setToast(''), 4000)
+    return () => window.clearTimeout(toastTimer)
+  }, [toast])
+
+  const validateFile = (file) => {
+    const name = file.name.toLowerCase()
+    if (!allowedExtensions.some((extension) => name.endsWith(extension))) {
+      setSelectedFile(null)
+      setFileError('Định dạng file không được hỗ trợ.')
+      setResult(null)
+      return
+    }
+    if (file.size > maxFileSize) {
+      setSelectedFile(null)
+      setFileError('File vượt quá dung lượng cho phép.')
+      setResult(null)
+      return
+    }
+    setSelectedFile(file)
+    setFileError('')
+    setResult(null)
+  }
+
+  const processImport = () => {
+    if (!selectedFile || fileError || processing) return
+    setProcessing(true)
+    timerRef.current = window.setTimeout(() => {
+      const importedAt = new Date().toISOString()
+      const importResult = {
+        id: `IMP-${Date.now()}`,
+        fileName: selectedFile.name,
+        importedAt,
+        totalRows: 1250,
+        successRows: 1220,
+        skippedRows: 20,
+        errorRows: 10,
+        status: 'PARTIAL',
+        errors: mockImportErrors,
+      }
+      setResult(importResult)
+      setHistory((current) => [importResult, ...current])
+      setHistoryPage(1)
+      setProcessing(false)
+      setToast('Đã xử lý dữ liệu và cập nhật lịch sử import.')
+    }, 1200)
+  }
+
+  return (
+    <div className={`app-shell processing-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+      <Sidebar />
+      <div className="app-main">
+        <Header showBreadcrumb={false} />
+        <main className="px-4 pb-10 pt-4 sm:px-5 xl:px-6">
+          <header className="mb-4">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-950 lg:text-[29px]">Import dữ liệu</h1>
+            <p className="mt-1 text-sm text-slate-500">Tải lên và xử lý dữ liệu hồ sơ</p>
+          </header>
+
+          <div className="grid items-start gap-4 lg:grid-cols-[minmax(300px,35fr)_minmax(0,65fr)]">
+            <div className="space-y-3">
+              <ImportDropzone file={selectedFile} error={fileError} onSelect={validateFile} onRemove={() => { setSelectedFile(null); setFileError(''); setResult(null) }} />
+              <button type="button" disabled={!selectedFile || Boolean(fileError) || processing} className="flex h-11 w-full items-center justify-center gap-2 rounded-md bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300" onClick={processImport}>
+                {processing ? <><LoaderCircle size={18} className="animate-spin" /> Đang xử lý...</> : <><Play size={18} /> Xử lý dữ liệu</>}
+              </button>
+              <ImportSummary result={result} onViewErrors={() => setVisibleErrors(result.errors)} />
+            </div>
+
+            <ImportHistoryTable items={history} page={historyPage} pageSize={10} onPageChange={setHistoryPage} onView={setDetailId} />
+          </div>
+
+          <section className="mt-4 flex gap-3 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm leading-6 text-slate-600">
+            <Info size={20} className="mt-0.5 shrink-0 text-blue-600" />
+            <div><p>Sau khi import, hệ thống sẽ tự động kiểm tra dữ liệu trùng và cập nhật.</p><p>Dữ liệu hồ sơ đã hoàn thành sẽ được sử dụng để huấn luyện/đánh giá model khi thực hiện chức năng AI.</p></div>
+          </section>
+        </main>
+      </div>
+
+      <ImportHistoryDetail item={detailItem} onClose={() => setDetailId(null)} onViewErrors={setVisibleErrors} />
+      <ImportErrorModal open={Boolean(visibleErrors)} errors={visibleErrors || []} onClose={() => setVisibleErrors(null)} />
+
+      {toast && <div className="fixed bottom-5 right-5 z-[90] flex max-w-sm items-center gap-3 rounded-lg border border-emerald-200 bg-white px-4 py-3 text-sm font-semibold text-emerald-700 shadow-xl" role="status"><CheckCircle2 size={20} /><span>{toast}</span><button type="button" aria-label="Đóng thông báo" className="ml-2 text-slate-400 hover:text-slate-600" onClick={() => setToast('')}><X size={17} /></button></div>}
+    </div>
+  )
+}

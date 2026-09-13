@@ -1,11 +1,25 @@
 import { Bell, ChevronDown, LogOut, Menu, Search } from 'lucide-react'
 import { useDispatch } from 'react-redux'
+import { useNavigate } from 'react-router-dom'
 import { setSearchTerm } from '../../features/dashboard/dashboardSlice'
 import { toggleMobileSidebar } from '../../features/ui/uiSlice'
 import Breadcrumb from './Breadcrumb'
 
-export default function Header({ showBreadcrumb = true, onSearch }) {
+const defaultUser = {
+  initials: 'NV',
+  name: 'Nguyễn Văn A',
+  role: 'Quản trị viên',
+}
+
+export default function Header({
+  showBreadcrumb = true,
+  onSearch,
+  onNotificationClick,
+  notificationCount = 3,
+  user = defaultUser,
+}) {
   const dispatch = useDispatch()
+  const navigate = useNavigate()
 
   const handleSearch = (value) => {
     if (onSearch) {
@@ -39,14 +53,14 @@ export default function Header({ showBreadcrumb = true, onSearch }) {
       </label>
 
       <div className="header-actions">
-        <button type="button" className="notification-button" aria-label="Thông báo">
+        <button type="button" className="notification-button" aria-label="Thông báo" onClick={onNotificationClick || (() => navigate('/assignment-tracking'))}>
           <Bell size={20} />
-          <span>3</span>
+          {notificationCount > 0 && <span>{notificationCount}</span>}
         </button>
-        <div className="header-avatar">NV</div>
+        <div className="header-avatar">{user.initials}</div>
         <div className="header-user">
-          <strong>Nguyễn Văn A</strong>
-          <span>Quản trị viên</span>
+          <strong>{user.name}</strong>
+          <span>{user.role}</span>
         </div>
         <ChevronDown size={17} className="header-chevron" />
         <button type="button" className="logout-button">

@@ -3,10 +3,14 @@ import {
   Building2,
   CheckCircle2,
   ChevronDown,
+  ClipboardList,
   FileText,
   House,
+  Inbox,
+  Import,
   ListTree,
   PanelLeftClose,
+  Send,
   Settings,
   Users,
   X,
@@ -18,6 +22,10 @@ import { closeMobileSidebar, toggleSidebar } from '../../features/ui/uiSlice'
 const menu = [
   { label: 'Tổng quan', icon: House, path: '/overview' },
   { label: 'Hồ sơ đang xử lý', icon: FileText, path: '/dashboard' },
+  { label: 'Giao việc', icon: Send, path: '/assignments' },
+  { label: 'Việc được giao', icon: Inbox, path: '/assigned-work' },
+  { label: 'Theo dõi giao việc', icon: ClipboardList, path: '/assignment-tracking' },
+  { label: 'Import dữ liệu', icon: Import, path: '/data-import' },
   { label: 'Hồ sơ đã xử lý', icon: CheckCircle2 },
   { label: 'Báo cáo thống kê', icon: BarChart3 },
   { label: 'Danh mục', icon: ListTree },
@@ -25,7 +33,13 @@ const menu = [
   { label: 'Cài đặt', icon: Settings },
 ]
 
-export default function Sidebar() {
+const defaultUser = {
+  initials: 'NV',
+  name: 'Nguyễn Văn A',
+  role: 'Quản trị viên',
+}
+
+export default function Sidebar({ user = defaultUser }) {
   const dispatch = useDispatch()
   const location = useLocation()
   const navigate = useNavigate()
@@ -84,10 +98,10 @@ export default function Sidebar() {
 
         <div className="sidebar-footer">
           <button type="button" className="sidebar-profile">
-            <span className="profile-avatar">NV</span>
+            <span className="profile-avatar">{user.initials}</span>
             <span className="profile-copy">
-              <strong>Nguyễn Văn A</strong>
-              <small>Quản trị viên</small>
+              <strong>{user.name}</strong>
+              <small>{user.role}</small>
             </span>
             <ChevronDown size={17} />
           </button>
