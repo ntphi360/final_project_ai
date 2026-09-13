@@ -1,5 +1,6 @@
+import { AlertCircle, LoaderCircle } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { useSelector } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import AssignmentTrackingDetailPanel from '../components/assignment-tracking/AssignmentTrackingDetailPanel'
 import AssignmentTrackingFilter from '../components/assignment-tracking/AssignmentTrackingFilter'
@@ -8,71 +9,69 @@ import AssignmentTrackingTable from '../components/assignment-tracking/Assignmen
 import AssignmentTrackingTabs from '../components/assignment-tracking/AssignmentTrackingTabs'
 import Header from '../components/layout/Header'
 import Sidebar from '../components/layout/Sidebar'
+import {
+  clearAssignmentDetail,
+  fetchAssignmentDetail,
+  fetchTrackingAssignments,
+  fetchTrackingAssignmentSummary,
+} from '../features/assignments/assignmentsSlice'
+import { getDepartments } from '../services/catalogService'
+import { getOfficers } from '../services/officerService'
 
 const emptyFilters = {
   query: '',
-  assigner: 'all',
-  assignee: 'all',
-  department: 'all',
+  assignerId: 'all',
+  assigneeId: 'all',
+  departmentId: 'all',
   status: 'all',
   from: '',
   to: '',
 }
 
-function normalize(value) {
-  return value.trim().toLocaleLowerCase('vi')
-}
-
 export default function AssignmentTracking() {
+  const dispatch = useDispatch()
   const navigate = useNavigate()
   const { sidebarCollapsed } = useSelector((state) => state.ui)
-  const assignments = useSelector((state) => state.assignments.items)
+  const { trackingList, trackingSummary, detail, loading, errors } = useSelector((state) => state.assignments)
   const [activeTab, setActiveTab] = useState('ALL')
   const [draftFilters, setDraftFilters] = useState(emptyFilters)
   const [appliedFilters, setAppliedFilters] = useState(emptyFilters)
   const [globalSearch, setGlobalSearch] = useState('')
-  const [detailId, setDetailId] = useState(null)
+  const [options, setOptions] = useState({ officers: [], departments: [] })
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
-  const options = useMemo(() => ({
-    assigners: [...new Set(assignments.map((item) => item.assignerName))].sort(),
-    assignees: [...new Set(assignments.map((item) => item.assigneeName))].sort(),
-    departments: [...new Set(assignments.map((item) => item.departmentName))].sort(),
-  }), [assignments])
+  const queryParams = useMemo(() => ({
+    status: activeTab !== 'ALL' ? activeTab : appliedFilters.status !== 'all' ? appliedFilters.status : undefined,
+    assignerId: appliedFilters.assignerId !== 'all' ? appliedFilters.assignerId : undefined,
+    assigneeId: appliedFilters.assigneeId !== 'all' ? appliedFilters.assigneeId : undefined,
+    departmentId: appliedFilters.departmentId !== 'all' ? appliedFilters.departmentId : undefined,
+    search: globalSearch.trim() || appliedFilters.query.trim() || undefined,
+    fromDate: appliedFilters.from || undefined,
+    toDate: appliedFilters.to || undefined,
+    page,
+    pageSize,
+  }), [activeTab, appliedFilters, globalSearch, page, pageSize])
 
-  const filteredAssignments = useMemo(() => assignments.filter((item) => {
-    const query = normalize(appliedFilters.query)
-    const headerQuery = normalize(globalSearch)
-    const searchable = normalize(`${item.caseCode} ${item.procedureName} ${item.assignerName} ${item.assigneeName} ${item.departmentName}`)
-    const assignedDate = item.assignedAt.slice(0, 10)
-
-    return (activeTab === 'ALL' || item.status === activeTab)
-      && (!query || searchable.includes(query))
-      && (!headerQuery || searchable.includes(headerQuery))
-      && (appliedFilters.assigner === 'all' || item.assignerName === appliedFilters.assigner)
-      && (appliedFilters.assignee === 'all' || item.assigneeName === appliedFilters.assignee)
-      && (appliedFilters.department === 'all' || item.departmentName === appliedFilters.department)
-      && (appliedFilters.status === 'all' || item.status === appliedFilters.status)
-      && (!appliedFilters.from || assignedDate >= appliedFilters.from)
-      && (!appliedFilters.to || assignedDate <= appliedFilters.to)
-  }), [activeTab, appliedFilters, assignments, globalSearch])
-
-  const totalPages = Math.max(1, Math.ceil(filteredAssignments.length / pageSize))
-  const pageAssignments = filteredAssignments.slice((page - 1) * pageSize, page * pageSize)
-  const detailAssignment = assignments.find((item) => item.id === detailId) || null
-  const responseNotifications = useMemo(() => assignments
+  const responseNotifications = useMemo(() => trackingList.items
     .filter((item) => item.status !== 'PENDING')
-    .sort((a, b) => new Date(b.acceptedAt || b.rejectedAt) - new Date(a.acceptedAt || a.rejectedAt)), [assignments])
+    .sort((a, b) => new Date(b.acceptedAt || b.rejectedAt) - new Date(a.acceptedAt || a.rejectedAt)), [trackingList.items])
 
   useEffect(() => {
-    if (page > totalPages) setPage(totalPages)
-  }, [page, totalPages])
+    dispatch(fetchTrackingAssignments(queryParams))
+  }, [dispatch, queryParams])
 
   useEffect(() => {
-    setDetailId(null)
-  }, [activeTab, appliedFilters, globalSearch, page, pageSize])
+    dispatch(fetchTrackingAssignmentSummary())
+    Promise.all([getOfficers(), getDepartments()])
+      .then(([officers, departments]) => setOptions({ officers, departments }))
+      .catch(() => setOptions({ officers: [], departments: [] }))
+  }, [dispatch])
+
+  useEffect(() => {
+    dispatch(clearAssignmentDetail())
+  }, [activeTab, appliedFilters, globalSearch, page, pageSize, dispatch])
 
   const resetFilters = () => {
     setPage(1)
@@ -80,25 +79,19 @@ export default function AssignmentTracking() {
     setAppliedFilters(emptyFilters)
   }
 
+  const openDetail = (id) => dispatch(fetchAssignmentDetail(id))
+
   return (
     <div className={`app-shell processing-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       <Sidebar />
       <div className="app-main">
-        <Header showBreadcrumb={false} onSearch={setGlobalSearch} onNotificationClick={() => setNotificationsOpen((open) => !open)} notificationCount={responseNotifications.length} />
+        <Header showBreadcrumb={false} onSearch={setGlobalSearch} onNotificationClick={() => setNotificationsOpen((open) => !open)} notificationCount={trackingSummary.accepted + trackingSummary.rejected} />
         {notificationsOpen && (
           <section className="fixed right-5 top-[62px] z-[70] w-[min(380px,calc(100vw-24px))] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xl" aria-label="Thông báo phản hồi giao việc">
             <header className="border-b border-slate-200 px-4 py-3 text-sm font-bold text-slate-900">Phản hồi giao việc</header>
             <div className="max-h-80 overflow-y-auto p-2">
-              {responseNotifications.map((item) => (
-                <button
-                  type="button"
-                  className="block w-full rounded-md px-3 py-2.5 text-left text-sm leading-5 text-slate-700 transition hover:bg-slate-50"
-                  onClick={() => { setDetailId(item.id); setNotificationsOpen(false) }}
-                  key={item.id}
-                >
-                  <span className="font-semibold text-slate-900">{item.assigneeName}</span>{item.status === 'ACCEPTED' ? ' đã xác nhận nhận hồ sơ ' : ' đã từ chối hồ sơ '}<span className="font-semibold text-blue-700">{item.caseCode}</span>.
-                </button>
-              ))}
+              {responseNotifications.map((item) => <button type="button" className="block w-full rounded-md px-3 py-2.5 text-left text-sm leading-5 text-slate-700 transition hover:bg-slate-50" onClick={() => { openDetail(item.id); setNotificationsOpen(false) }} key={item.id}><span className="font-semibold text-slate-900">{item.assigneeName}</span>{item.status === 'ACCEPTED' ? ' đã xác nhận nhận hồ sơ ' : ' đã từ chối hồ sơ '}<span className="font-semibold text-blue-700">{item.caseCode}</span>.</button>)}
+              {responseNotifications.length === 0 && <p className="px-3 py-5 text-center text-sm text-slate-500">Chưa có phản hồi trên trang hiện tại.</p>}
             </div>
           </section>
         )}
@@ -109,10 +102,14 @@ export default function AssignmentTracking() {
             <p className="mt-1 text-sm text-slate-500">Theo dõi tình trạng tiếp nhận và phản hồi của các công việc đã giao.</p>
           </header>
 
-          <div className={`grid items-start gap-3 ${detailAssignment ? 'xl:grid-cols-[minmax(0,1fr)_440px]' : 'grid-cols-1'}`}>
+          {loading.tracking && <div className="mb-3 flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700"><LoaderCircle size={18} className="animate-spin" /> Đang tải danh sách giao việc...</div>}
+          {(errors.tracking || errors.trackingSummary) && <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"><span className="flex items-center gap-2"><AlertCircle size={18} />{errors.tracking || errors.trackingSummary}</span><button type="button" className="font-semibold underline" onClick={() => { dispatch(fetchTrackingAssignments(queryParams)); dispatch(fetchTrackingAssignmentSummary()) }}>Thử lại</button></div>}
+          {errors.detail && <div className="mb-3 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"><AlertCircle size={18} />{errors.detail}</div>}
+
+          <div className={`grid items-start gap-3 ${detail ? 'xl:grid-cols-[minmax(0,1fr)_440px]' : 'grid-cols-1'}`}>
             <div className="min-w-0 space-y-3">
-              <AssignmentTrackingSummary assignments={assignments} />
-              <AssignmentTrackingTabs assignments={assignments} activeTab={activeTab} onChange={(tab) => { setPage(1); setActiveTab(tab) }} />
+              <AssignmentTrackingSummary summary={trackingSummary} />
+              <AssignmentTrackingTabs summary={trackingSummary} activeTab={activeTab} onChange={(tab) => { setPage(1); setActiveTab(tab) }} />
               <AssignmentTrackingFilter
                 filters={draftFilters}
                 options={options}
@@ -121,21 +118,19 @@ export default function AssignmentTracking() {
                 onReset={resetFilters}
               />
               <AssignmentTrackingTable
-                assignments={pageAssignments}
-                totalCount={filteredAssignments.length}
+                assignments={trackingList.items}
+                totalCount={trackingList.total}
                 page={page}
                 pageSize={pageSize}
-                onView={setDetailId}
+                onView={openDetail}
                 onPageChange={setPage}
                 onPageSizeChange={(size) => { setPage(1); setPageSize(size) }}
               />
             </div>
 
-            <AssignmentTrackingDetailPanel
-              assignment={detailAssignment}
-              onClose={() => setDetailId(null)}
-              onReassign={(caseId) => navigate('/assignments', { state: { caseId } })}
-            />
+            {loading.detail && !detail
+              ? <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-600"><LoaderCircle size={18} className="animate-spin" /> Đang tải chi tiết...</div>
+              : <AssignmentTrackingDetailPanel assignment={detail} onClose={() => dispatch(clearAssignmentDetail())} onReassign={(caseId) => navigate('/assignments', { state: { caseId } })} />}
           </div>
         </main>
       </div>

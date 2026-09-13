@@ -1,40 +1,35 @@
-import { CheckCircle2, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { AlertCircle, CheckCircle2, LoaderCircle, X } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
+import { useLocation } from 'react-router-dom'
 import AssignmentCaseFilter from '../components/assignments/AssignmentCaseFilter'
 import AssignmentCaseTable from '../components/assignments/AssignmentCaseTable'
 import AssignmentConfirmModal from '../components/assignments/AssignmentConfirmModal'
 import AssignmentForm from '../components/assignments/AssignmentForm'
 import Header from '../components/layout/Header'
 import Sidebar from '../components/layout/Sidebar'
-import { assignmentOfficers, createMockAssignments } from '../data/mockAssignments'
-import { createProcessingCases } from '../data/mockProcessingCases'
-import { addAssignments } from '../features/assignments/assignmentsSlice'
+import { createAssignmentBatch } from '../features/assignments/assignmentsSlice'
+import { getAllProcessingCases } from '../services/caseService'
+import { getOfficers } from '../services/officerService'
+import { getApiErrorMessage } from '../services/serviceUtils'
 
-const emptyFilters = {
-  query: '',
-  field: 'all',
-  department: 'all',
-  officer: 'all',
-  status: 'all',
-}
-
-const initialForm = {
-  email: true,
-  sms: false,
-  officerId: '',
-  title: '',
-  content: '',
-}
+const emptyFilters = { query: '', field: 'all', department: 'all', officer: 'all', status: 'all' }
+const initialForm = { email: true, sms: false, officerId: '', title: '', content: '' }
 
 function normalize(value) {
   return value.trim().toLocaleLowerCase('vi')
 }
 
 export default function Assignment() {
+  const location = useLocation()
   const dispatch = useDispatch()
   const { sidebarCollapsed } = useSelector((state) => state.ui)
-  const [cases] = useState(createProcessingCases)
+  const submitting = useSelector((state) => state.assignments.loading.action)
+  const [cases, setCases] = useState([])
+  const [officers, setOfficers] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [actionError, setActionError] = useState('')
   const [draftFilters, setDraftFilters] = useState(emptyFilters)
   const [appliedFilters, setAppliedFilters] = useState(emptyFilters)
   const [globalSearch, setGlobalSearch] = useState('')
@@ -44,6 +39,34 @@ export default function Assignment() {
   const [pageSize, setPageSize] = useState(10)
   const [modalOpen, setModalOpen] = useState(false)
   const [toast, setToast] = useState('')
+
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    setLoadError('')
+    try {
+      const [caseItems, officerItems] = await Promise.all([
+        getAllProcessingCases(),
+        getOfficers(),
+      ])
+      setCases(caseItems)
+      setOfficers(officerItems)
+    } catch (error) {
+      setLoadError(getApiErrorMessage(error, 'Không thể tải hồ sơ hoặc danh sách cán bộ. Vui lòng thử lại.'))
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  useEffect(() => {
+    const requestedCase = location.state?.caseId
+    if (!requestedCase || cases.length === 0) return
+    const match = cases.find((item) => item.caseCode === requestedCase || item.id === requestedCase)
+    if (match) setSelectedIds([match.id])
+  }, [cases, location.state])
 
   const options = useMemo(() => ({
     field: [...new Set(cases.map((item) => item.field))].sort(),
@@ -55,8 +78,7 @@ export default function Assignment() {
   const filteredCases = useMemo(() => cases.filter((item) => {
     const query = normalize(appliedFilters.query)
     const headerQuery = normalize(globalSearch)
-    const searchable = normalize(`${item.id} ${item.procedure} ${item.field} ${item.department} ${item.officer}`)
-
+    const searchable = normalize(`${item.caseCode} ${item.procedure} ${item.field} ${item.department} ${item.officer}`)
     return (!query || searchable.includes(query))
       && (!headerQuery || searchable.includes(headerQuery))
       && (appliedFilters.field === 'all' || item.field === appliedFilters.field)
@@ -67,12 +89,8 @@ export default function Assignment() {
 
   const totalPages = Math.max(1, Math.ceil(filteredCases.length / pageSize))
   const pageCases = filteredCases.slice((page - 1) * pageSize, page * pageSize)
-  const selectedCases = cases.filter((item) => selectedIds.includes(item.id))
-  const selectedOfficer = assignmentOfficers.find((item) => item.id === form.officerId) || null
-  const canSubmit = selectedIds.length > 0
-    && Boolean(selectedOfficer)
-    && Boolean(form.title.trim())
-    && Boolean(form.content.trim())
+  const selectedOfficer = officers.find((item) => String(item.id) === String(form.officerId)) || null
+  const canSubmit = selectedIds.length > 0 && Boolean(selectedOfficer) && Boolean(form.title.trim()) && Boolean(form.content.trim())
 
   useEffect(() => {
     if (page > totalPages) setPage(totalPages)
@@ -84,7 +102,7 @@ export default function Assignment() {
 
   useEffect(() => {
     if (!toast) return undefined
-    const timer = window.setTimeout(() => setToast(''), 4000)
+    const timer = window.setTimeout(() => setToast(''), 5000)
     return () => window.clearTimeout(timer)
   }, [toast])
 
@@ -105,14 +123,27 @@ export default function Assignment() {
   const resetAssignment = () => {
     setSelectedIds([])
     setForm(initialForm)
+    setActionError('')
   }
 
-  const confirmAssignment = () => {
-    const newAssignments = createMockAssignments(selectedCases, selectedOfficer, form)
-    dispatch(addAssignments(newAssignments))
-    setModalOpen(false)
-    setToast(`Giao việc thành công cho ${newAssignments.length} hồ sơ.`)
-    resetAssignment()
+  const confirmAssignment = async () => {
+    setActionError('')
+    try {
+      const result = await dispatch(createAssignmentBatch({
+        caseIds: selectedIds,
+        assigneeId: Number(form.officerId),
+        title: form.title.trim(),
+        content: form.content.trim(),
+        sendEmail: form.email,
+        sendSms: form.sms,
+      })).unwrap()
+      setModalOpen(false)
+      setToast(`Đã giao thành công ${result.createdCount} hồ sơ.${result.skippedCount ? ` ${result.skippedCount} hồ sơ bị bỏ qua do đã có giao việc đang chờ.` : ''}`)
+      resetAssignment()
+    } catch (error) {
+      setModalOpen(false)
+      setActionError(typeof error === 'string' ? error : 'Không thể tạo giao việc. Vui lòng thử lại.')
+    }
   }
 
   return (
@@ -126,15 +157,16 @@ export default function Assignment() {
             <p className="mt-1 text-sm text-slate-500">Chọn hồ sơ và phân công cho cán bộ xử lý.</p>
           </header>
 
+          {loading && <div className="mb-3 flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700"><LoaderCircle size={18} className="animate-spin" /> Đang tải dữ liệu...</div>}
+          {loadError && <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"><span className="flex items-center gap-2"><AlertCircle size={18} />{loadError}</span><button type="button" className="font-semibold underline" onClick={loadData}>Thử lại</button></div>}
+          {actionError && <div className="mb-3 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"><AlertCircle size={18} />{actionError}</div>}
+
           <div className="space-y-3">
             <AssignmentCaseFilter
               filters={draftFilters}
               options={options}
               onChange={(key, value) => setDraftFilters((current) => ({ ...current, [key]: value }))}
-              onApply={() => {
-                setPage(1)
-                setAppliedFilters({ ...draftFilters })
-              }}
+              onApply={() => { setPage(1); setAppliedFilters({ ...draftFilters }) }}
             />
             <AssignmentCaseTable
               cases={pageCases}
@@ -145,16 +177,14 @@ export default function Assignment() {
               onToggleCase={handleToggleCase}
               onTogglePage={handleTogglePage}
               onPageChange={setPage}
-              onPageSizeChange={(size) => {
-                setPage(1)
-                setPageSize(size)
-              }}
+              onPageSizeChange={(size) => { setPage(1); setPageSize(size) }}
             />
             <AssignmentForm
               form={form}
-              officers={assignmentOfficers}
+              officers={officers}
               selectedCount={selectedIds.length}
-              canSubmit={canSubmit}
+              canSubmit={canSubmit && !submitting}
+              submitting={submitting}
               onChange={(key, value) => setForm((current) => ({ ...current, [key]: value }))}
               onReset={resetAssignment}
               onSubmit={() => setModalOpen(true)}
@@ -168,17 +198,12 @@ export default function Assignment() {
         count={selectedIds.length}
         officer={selectedOfficer}
         channels={{ email: form.email, sms: form.sms }}
+        submitting={submitting}
         onCancel={() => setModalOpen(false)}
         onConfirm={confirmAssignment}
       />
 
-      {toast && (
-        <div className="fixed bottom-5 right-5 z-[80] flex max-w-sm items-center gap-3 rounded-lg border border-emerald-200 bg-white px-4 py-3 text-sm font-semibold text-emerald-700 shadow-xl" role="status">
-          <CheckCircle2 size={20} className="shrink-0" />
-          <span>{toast}</span>
-          <button type="button" aria-label="Đóng thông báo" className="ml-2 text-slate-400 hover:text-slate-600" onClick={() => setToast('')}><X size={17} /></button>
-        </div>
-      )}
+      {toast && <div className="fixed bottom-5 right-5 z-[80] flex max-w-sm items-center gap-3 rounded-lg border border-emerald-200 bg-white px-4 py-3 text-sm font-semibold text-emerald-700 shadow-xl" role="status"><CheckCircle2 size={20} className="shrink-0" /><span>{toast}</span><button type="button" aria-label="Đóng thông báo" className="ml-2 text-slate-400 hover:text-slate-600" onClick={() => setToast('')}><X size={17} /></button></div>}
     </div>
   )
 }

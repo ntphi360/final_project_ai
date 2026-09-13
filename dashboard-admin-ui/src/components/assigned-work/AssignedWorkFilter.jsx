@@ -10,9 +10,9 @@ export default function AssignedWorkFilter({ filters, assigners, onChange, onApp
       </label>
       <label>
         <span className="mb-1 block text-xs font-medium text-slate-600">Người giao</span>
-        <select value={filters.assigner} className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" onChange={(event) => onChange('assigner', event.target.value)}>
+        <select value={filters.assignerId} className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" onChange={(event) => onChange('assignerId', event.target.value)}>
           <option value="all">Tất cả</option>
-          {assigners.map((assigner) => <option value={assigner} key={assigner}>{assigner}</option>)}
+          {assigners.map((assigner) => <option value={assigner.id} key={assigner.id}>{assigner.name}</option>)}
         </select>
       </label>
       <label>

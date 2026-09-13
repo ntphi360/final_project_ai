@@ -1,6 +1,6 @@
 import { CheckCircle2, X } from 'lucide-react'
 
-export default function AcceptWorkModal({ open, onCancel, onConfirm }) {
+export default function AcceptWorkModal({ open, submitting = false, onCancel, onConfirm }) {
   if (!open) return null
 
   return (
@@ -11,8 +11,8 @@ export default function AcceptWorkModal({ open, onCancel, onConfirm }) {
         <h2 id="accept-work-title" className="mt-3 text-center text-lg font-bold text-slate-900">Xác nhận nhận việc</h2>
         <p className="mt-3 text-center text-sm leading-6 text-slate-600">Bạn có chắc chắn muốn nhận công việc này?</p>
         <div className="mt-6 grid grid-cols-2 gap-3">
-          <button type="button" className="h-10 rounded-md border border-slate-200 bg-white text-sm font-semibold text-slate-600 hover:bg-slate-50" onClick={onCancel}>Hủy</button>
-          <button type="button" className="h-10 rounded-md bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700" onClick={onConfirm}>Xác nhận nhận việc</button>
+          <button type="button" disabled={submitting} className="h-10 rounded-md border border-slate-200 bg-white text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60" onClick={onCancel}>Hủy</button>
+          <button type="button" disabled={submitting} className="h-10 rounded-md bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300" onClick={onConfirm}>{submitting ? 'Đang xử lý...' : 'Xác nhận nhận việc'}</button>
         </div>
       </section>
     </div>

@@ -1,6 +1,6 @@
 import { Send, X } from 'lucide-react'
 
-export default function AssignmentConfirmModal({ open, count, officer, channels, onCancel, onConfirm }) {
+export default function AssignmentConfirmModal({ open, count, officer, channels, submitting = false, onCancel, onConfirm }) {
   if (!open || !officer) return null
 
   return (
@@ -21,8 +21,8 @@ export default function AssignmentConfirmModal({ open, count, officer, channels,
           <div className="flex justify-between rounded-md bg-slate-50 px-3 py-2"><dt>SMS</dt><dd className="font-semibold text-blue-700">{channels.sms ? 'Có' : 'Không'}</dd></div>
         </dl>
         <div className="mt-5 grid grid-cols-2 gap-3">
-          <button type="button" className="h-10 rounded-md border border-slate-200 bg-white text-sm font-semibold text-slate-600 transition hover:bg-slate-50" onClick={onCancel}>Hủy</button>
-          <button type="button" className="h-10 rounded-md bg-blue-600 text-sm font-semibold text-white transition hover:bg-blue-700" onClick={onConfirm}>Xác nhận giao việc</button>
+          <button type="button" disabled={submitting} className="h-10 rounded-md border border-slate-200 bg-white text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60" onClick={onCancel}>Hủy</button>
+          <button type="button" disabled={submitting} className="h-10 rounded-md bg-blue-600 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300" onClick={onConfirm}>{submitting ? 'Đang giao...' : 'Xác nhận giao việc'}</button>
         </div>
       </section>
     </div>

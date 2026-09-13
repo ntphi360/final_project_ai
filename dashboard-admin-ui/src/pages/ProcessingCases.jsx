@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
-import { X } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { AlertCircle, LoaderCircle, X } from 'lucide-react'
 import { useSelector } from 'react-redux'
+import { useLocation } from 'react-router-dom'
 import BulkConfirmModal from '../components/cases/BulkConfirmModal'
 import CaseBulkActionBar from '../components/cases/CaseBulkActionBar'
 import CaseDetailPanel from '../components/cases/CaseDetailPanel'
@@ -10,7 +11,8 @@ import CaseTable from '../components/cases/CaseTable'
 import RiskSummaryCards from '../components/cases/RiskSummaryCards'
 import Header from '../components/layout/Header'
 import Sidebar from '../components/layout/Sidebar'
-import { createProcessingCases } from '../data/mockProcessingCases'
+import { getProcessingCases } from '../services/caseService'
+import { getApiErrorMessage } from '../services/serviceUtils'
 import '../styles/processing-cases.css'
 
 const emptyFilters = {
@@ -28,8 +30,11 @@ function normalizeSearch(value) {
 }
 
 export default function ProcessingCases() {
+  const location = useLocation()
   const { sidebarCollapsed } = useSelector((state) => state.ui)
-  const [cases, setCases] = useState(createProcessingCases)
+  const [cases, setCases] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [activeTab, setActiveTab] = useState('all')
   const [draftFilters, setDraftFilters] = useState(emptyFilters)
   const [appliedFilters, setAppliedFilters] = useState(emptyFilters)
@@ -42,6 +47,29 @@ export default function ProcessingCases() {
   const [bulkChannels, setBulkChannels] = useState(emptyBulkChannels)
   const [confirmModalOpen, setConfirmModalOpen] = useState(false)
   const [feedback, setFeedback] = useState('')
+
+  const loadCases = useCallback(async () => {
+    setLoading(true)
+    setLoadError('')
+    try {
+      setCases(await getProcessingCases())
+    } catch (error) {
+      setLoadError(getApiErrorMessage(error, 'Không thể tải danh sách hồ sơ. Vui lòng thử lại.'))
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadCases()
+  }, [loadCases])
+
+  useEffect(() => {
+    const requestedCase = location.state?.caseId
+    if (!requestedCase || cases.length === 0) return
+    const match = cases.find((item) => item.caseCode === requestedCase || item.id === requestedCase)
+    if (match) setDetailCaseId(match.id)
+  }, [cases, location.state])
 
   const filterOptions = useMemo(() => ({
     field: [...new Set(cases.map((item) => item.field))].sort(),
@@ -57,7 +85,7 @@ export default function ProcessingCases() {
     const localQuery = normalizeSearch(appliedFilters.query)
     const headerQuery = normalizeSearch(globalSearch)
     const searchableText = normalizeSearch([
-      item.id,
+      item.caseCode,
       item.procedure,
       item.field,
       item.department,
@@ -174,6 +202,9 @@ export default function ProcessingCases() {
               </header>
 
               <RiskSummaryCards cases={cases} />
+
+              {loading && <div className="flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700"><LoaderCircle size={18} className="animate-spin" /> Đang tải dữ liệu hồ sơ...</div>}
+              {loadError && <div className="flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"><span className="flex items-center gap-2"><AlertCircle size={18} />{loadError}</span><button type="button" className="font-semibold underline" onClick={loadCases}>Thử lại</button></div>}
 
               <CaseStatusTabs activeTab={activeTab} cases={cases} onChange={(tab) => {
                 setPage(1)

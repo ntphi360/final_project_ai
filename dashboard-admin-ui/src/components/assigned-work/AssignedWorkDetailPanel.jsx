@@ -34,6 +34,7 @@ export default function AssignedWorkDetailPanel({ assignment, onClose, onAccept,
             <div className="grid grid-cols-[120px_1fr] gap-3 py-2.5"><dt className="text-slate-500">Lĩnh vực</dt><dd className="min-w-0 font-medium text-slate-800">{assignment.fieldName}</dd></div>
             <div className="grid grid-cols-[120px_1fr] gap-3 py-2.5"><dt className="text-slate-500">Phòng ban</dt><dd className="min-w-0 font-medium text-slate-800">{assignment.departmentName}</dd></div>
             <div className="grid grid-cols-[120px_1fr] gap-3 py-2.5"><dt className="flex items-center gap-1.5 text-slate-500"><UserRound size={14} /> Người giao</dt><dd className="font-medium text-slate-800">{assignment.assignerName}</dd></div>
+            <div className="grid grid-cols-[120px_1fr] gap-3 py-2.5"><dt className="flex items-center gap-1.5 text-slate-500"><UserRound size={14} /> Người nhận</dt><dd className="font-medium text-slate-800">{assignment.assigneeName}</dd></div>
             <div className="grid grid-cols-[120px_1fr] gap-3 py-2.5"><dt className="flex items-center gap-1.5 text-slate-500"><CalendarClock size={14} /> Thời gian giao</dt><dd className="font-medium tabular-nums text-slate-800">{formatAssignmentDate(assignment.assignedAt)}</dd></div>
             <div className="grid grid-cols-[120px_1fr] gap-3 py-2.5"><dt className="flex items-center gap-1.5 text-slate-500"><Bell size={14} /> Kênh thông báo</dt><dd className="font-medium text-slate-800">{channelLabel(assignment.notificationChannels)}</dd></div>
           </dl>

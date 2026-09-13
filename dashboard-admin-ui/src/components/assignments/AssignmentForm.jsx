@@ -1,6 +1,6 @@
 import { Mail, RotateCcw, Send, Smartphone, UserRound } from 'lucide-react'
 
-export default function AssignmentForm({ form, officers, selectedCount, canSubmit, onChange, onReset, onSubmit }) {
+export default function AssignmentForm({ form, officers, selectedCount, canSubmit, submitting = false, onChange, onReset, onSubmit }) {
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-3">
@@ -64,8 +64,8 @@ export default function AssignmentForm({ form, officers, selectedCount, canSubmi
         <button type="button" className="flex h-10 items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50" onClick={onReset}>
           <RotateCcw size={16} /> Bỏ chọn
         </button>
-        <button type="button" disabled={!canSubmit} className="flex h-10 items-center justify-center gap-2 rounded-md bg-blue-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300" onClick={onSubmit}>
-          <Send size={17} /> Giao việc
+        <button type="button" disabled={!canSubmit || submitting} className="flex h-10 items-center justify-center gap-2 rounded-md bg-blue-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300" onClick={onSubmit}>
+          <Send size={17} /> {submitting ? 'Đang giao...' : 'Giao việc'}
         </button>
       </div>
     </section>

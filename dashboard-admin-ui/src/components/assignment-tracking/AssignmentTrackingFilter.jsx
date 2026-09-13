@@ -9,9 +9,9 @@ export default function AssignmentTrackingFilter({ filters, options, onChange, o
         <input type="search" value={filters.query} placeholder="Tìm kiếm mã hồ sơ, tên thủ tục..." className="h-10 w-full rounded-md border border-slate-200 bg-white pl-10 pr-3 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" onChange={(event) => onChange('query', event.target.value)} />
       </label>
 
-      <FilterSelect label="Người giao" value={filters.assigner} options={options.assigners} onChange={(value) => onChange('assigner', value)} />
-      <FilterSelect label="Người nhận" value={filters.assignee} options={options.assignees} onChange={(value) => onChange('assignee', value)} />
-      <FilterSelect label="Phòng ban" value={filters.department} options={options.departments} onChange={(value) => onChange('department', value)} />
+      <FilterSelect label="Người giao" value={filters.assignerId} options={options.officers} onChange={(value) => onChange('assignerId', value)} />
+      <FilterSelect label="Người nhận" value={filters.assigneeId} options={options.officers} onChange={(value) => onChange('assigneeId', value)} />
+      <FilterSelect label="Phòng ban" value={filters.departmentId} options={options.departments} onChange={(value) => onChange('departmentId', value)} />
       <label>
         <span className="mb-1 block text-xs font-medium text-slate-600">Trạng thái</span>
         <select value={filters.status} className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" onChange={(event) => onChange('status', event.target.value)}>
@@ -36,7 +36,7 @@ function FilterSelect({ label, value, options, onChange }) {
       <span className="mb-1 block text-xs font-medium text-slate-600">{label}</span>
       <select value={value} className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" onChange={(event) => onChange(event.target.value)}>
         <option value="all">Tất cả</option>
-        {options.map((option) => <option value={option} key={option}>{option}</option>)}
+        {options.map((option) => <option value={option.id} key={option.id}>{option.name}</option>)}
       </select>
     </label>
   )

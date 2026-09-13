@@ -88,7 +88,7 @@ export default function AssignmentCaseTable({
                     onChange={() => onToggleCase(item.id)}
                   />
                 </td>
-                <td className="h-12 border-b border-slate-100 px-3 font-semibold text-blue-700">{item.id}</td>
+                <td className="h-12 border-b border-slate-100 px-3 font-semibold text-blue-700">{item.caseCode}</td>
                 <td className="h-12 border-b border-slate-100 px-3">
                   <span className="block truncate" title={item.procedure}>{item.procedure}</span>
                 </td>

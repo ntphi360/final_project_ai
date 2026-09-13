@@ -16,7 +16,7 @@ export default function ReportSummaryCards({ data }) {
         return (
           <article className="flex min-h-28 items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm" key={item.id}>
             <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-full ${tones[item.tone]}`}><Icon size={21} /></span>
-            <div className="min-w-0"><span className="block truncate text-xs font-medium text-slate-500">{item.label}</span><strong className="mt-1 block text-xl text-slate-950">{formatImportNumber(item.value)}</strong><span className={`mt-1 block text-xs font-semibold ${positive ? 'text-emerald-600' : 'text-red-500'}`}>{item.direction === 'up' ? '↑' : '↓'} {item.change}%</span><small className="block truncate text-[10px] text-slate-400">so với kỳ trước</small></div>
+            <div className="min-w-0"><span className="block truncate text-xs font-medium text-slate-500">{item.label}</span><strong className="mt-1 block text-xl text-slate-950">{formatImportNumber(item.value)}</strong>{item.change == null ? <small className="mt-2 block truncate text-[10px] text-slate-400">Dữ liệu hiện tại</small> : <><span className={`mt-1 block text-xs font-semibold ${positive ? 'text-emerald-600' : 'text-red-500'}`}>{item.direction === 'up' ? '↑' : '↓'} {item.change}%</span><small className="block truncate text-[10px] text-slate-400">so với kỳ trước</small></>}</div>
           </article>
         )
       })}

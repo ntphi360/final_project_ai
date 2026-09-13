@@ -58,7 +58,7 @@ export default function CaseDetailPanel({ item, onClose, onStatusChange, onChann
     : 'Tiến độ hiện tại tương đối ổn định. Tiếp tục theo dõi thời hạn xử lý.'
 
   return (
-    <aside className="case-detail-panel" aria-label={`Thông tin chi tiết hồ sơ ${item.id}`}>
+    <aside className="case-detail-panel" aria-label={`Thông tin chi tiết hồ sơ ${item.caseCode}`}>
       <header className="detail-panel-title">
         <h2>Thông tin chi tiết</h2>
         <button type="button" aria-label="Đóng panel" onClick={onClose}><X size={21} /></button>
@@ -68,7 +68,7 @@ export default function CaseDetailPanel({ item, onClose, onStatusChange, onChann
         <section className="detail-case-heading">
           <span className="detail-file-icon"><FileText size={23} /></span>
           <div>
-            <strong>Mã hồ sơ: {item.id}</strong>
+            <strong>Mã hồ sơ: {item.caseCode}</strong>
             <span>{item.procedure}</span>
           </div>
           <button type="button" className="copy-case-code" aria-label="Sao chép mã hồ sơ"><Copy size={16} /></button>

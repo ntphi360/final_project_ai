@@ -7,11 +7,12 @@ const cards = [
   { status: 'REJECTED', label: 'Từ chối', icon: XCircle, tone: 'border-red-100 bg-red-50 text-red-700', iconTone: 'bg-red-100' },
 ]
 
-export default function AssignedWorkSummary({ assignments }) {
+export default function AssignedWorkSummary({ summary }) {
   return (
     <section className="grid grid-cols-2 gap-3 xl:grid-cols-4" aria-label="Tổng quan việc được giao">
       {cards.map(({ status, label, icon: Icon, tone, iconTone }) => {
-        const count = status === 'ALL' ? assignments.length : assignments.filter((item) => item.status === status).length
+        const summaryKey = status === 'ALL' ? 'total' : status.toLowerCase()
+        const count = summary[summaryKey] || 0
         return (
           <article className={`flex min-h-24 items-center gap-4 rounded-lg border p-4 shadow-sm ${tone}`} key={status}>
             <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-full ${iconTone}`}><Icon size={23} /></span>

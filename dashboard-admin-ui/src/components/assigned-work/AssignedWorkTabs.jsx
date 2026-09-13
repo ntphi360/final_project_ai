@@ -5,11 +5,12 @@ const tabs = [
   { id: 'REJECTED', label: 'Từ chối' },
 ]
 
-export default function AssignedWorkTabs({ assignments, activeTab, onChange }) {
+export default function AssignedWorkTabs({ summary, activeTab, onChange }) {
   return (
     <div className="flex gap-2 overflow-x-auto" role="tablist" aria-label="Trạng thái việc được giao">
       {tabs.map((tab) => {
-        const count = tab.id === 'ALL' ? assignments.length : assignments.filter((item) => item.status === tab.id).length
+        const summaryKey = tab.id === 'ALL' ? 'total' : tab.id.toLowerCase()
+        const count = summary[summaryKey] || 0
         return (
           <button
             type="button"

@@ -1,6 +1,6 @@
 import { XCircle, X } from 'lucide-react'
 
-export default function RejectWorkModal({ open, reason, onReasonChange, onCancel, onConfirm }) {
+export default function RejectWorkModal({ open, reason, submitting = false, onReasonChange, onCancel, onConfirm }) {
   if (!open) return null
 
   const canSubmit = Boolean(reason.trim())
@@ -17,8 +17,8 @@ export default function RejectWorkModal({ open, reason, onReasonChange, onCancel
           <span className="mt-1 block text-right text-xs text-slate-400">{reason.length}/500</span>
         </label>
         <div className="mt-5 grid grid-cols-2 gap-3">
-          <button type="button" className="h-10 rounded-md border border-slate-200 bg-white text-sm font-semibold text-slate-600 hover:bg-slate-50" onClick={onCancel}>Hủy</button>
-          <button type="button" disabled={!canSubmit} className="h-10 rounded-md bg-red-600 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300" onClick={onConfirm}>Xác nhận từ chối</button>
+          <button type="button" disabled={submitting} className="h-10 rounded-md border border-slate-200 bg-white text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60" onClick={onCancel}>Hủy</button>
+          <button type="button" disabled={!canSubmit || submitting} className="h-10 rounded-md bg-red-600 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300" onClick={onConfirm}>{submitting ? 'Đang xử lý...' : 'Xác nhận từ chối'}</button>
         </div>
       </section>
     </div>

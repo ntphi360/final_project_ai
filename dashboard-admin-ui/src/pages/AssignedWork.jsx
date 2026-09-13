@@ -1,4 +1,4 @@
-import { CheckCircle2, X } from 'lucide-react'
+import { AlertCircle, CheckCircle2, LoaderCircle, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import AcceptWorkModal from '../components/assigned-work/AcceptWorkModal'
@@ -10,167 +10,170 @@ import AssignedWorkTabs from '../components/assigned-work/AssignedWorkTabs'
 import RejectWorkModal from '../components/assigned-work/RejectWorkModal'
 import Header from '../components/layout/Header'
 import Sidebar from '../components/layout/Sidebar'
-import { acceptAssignment, rejectAssignment } from '../features/assignments/assignmentsSlice'
+import { currentAssigneeId } from '../config/currentIdentity'
+import {
+  clearAssignmentDetail,
+  confirmAssignment,
+  declineAssignment,
+  fetchAssignmentDetail,
+  fetchMyAssignments,
+  fetchMyAssignmentSummary,
+} from '../features/assignments/assignmentsSlice'
+import { getOfficers } from '../services/officerService'
 
-const receiverUser = {
-  initials: 'TB',
-  name: 'Trần Thị B',
-  role: 'Cán bộ xử lý',
-}
+const emptyFilters = { query: '', assignerId: 'all', status: 'all', fromDate: '', toDate: '' }
+const fallbackUser = { initials: 'CB', name: 'Cán bộ nhận việc', role: 'Cán bộ xử lý' }
 
-const emptyFilters = {
-  query: '',
-  assigner: 'all',
-  status: 'all',
-  from: '',
-  to: '',
-}
-
-function normalize(value) {
-  return value.trim().toLocaleLowerCase('vi')
+function getInitials(name) {
+  return name.split(/\s+/).filter(Boolean).slice(-2).map((part) => part[0]).join('').toUpperCase()
 }
 
 export default function AssignedWork() {
   const dispatch = useDispatch()
   const { sidebarCollapsed } = useSelector((state) => state.ui)
-  const assignments = useSelector((state) => state.assignments.items)
+  const { myList, mySummary, detail, loading, errors } = useSelector((state) => state.assignments)
   const [activeTab, setActiveTab] = useState('ALL')
   const [draftFilters, setDraftFilters] = useState(emptyFilters)
   const [appliedFilters, setAppliedFilters] = useState(emptyFilters)
   const [globalSearch, setGlobalSearch] = useState('')
-  const [detailId, setDetailId] = useState(null)
+  const [officers, setOfficers] = useState([])
   const [acceptModalOpen, setAcceptModalOpen] = useState(false)
   const [rejectModalOpen, setRejectModalOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [toast, setToast] = useState('')
+  const [actionMessage, setActionMessage] = useState('')
 
-  const assigners = useMemo(() => [...new Set(assignments.map((item) => item.assignerName))].sort(), [assignments])
+  const queryParams = useMemo(() => ({
+    status: activeTab !== 'ALL' ? activeTab : appliedFilters.status !== 'all' ? appliedFilters.status : undefined,
+    search: globalSearch.trim() || appliedFilters.query.trim() || undefined,
+    assignerId: appliedFilters.assignerId !== 'all' ? appliedFilters.assignerId : undefined,
+    fromDate: appliedFilters.fromDate || undefined,
+    toDate: appliedFilters.toDate || undefined,
+    page,
+    pageSize,
+  }), [activeTab, appliedFilters, globalSearch, page, pageSize])
 
-  const filteredAssignments = useMemo(() => assignments.filter((item) => {
-    const query = normalize(appliedFilters.query)
-    const headerQuery = normalize(globalSearch)
-    const searchable = normalize(`${item.caseCode} ${item.procedureName} ${item.assignerName}`)
-    const assignedDate = item.assignedAt.slice(0, 10)
-
-    return (activeTab === 'ALL' || item.status === activeTab)
-      && (!query || searchable.includes(query))
-      && (!headerQuery || searchable.includes(headerQuery))
-      && (appliedFilters.assigner === 'all' || item.assignerName === appliedFilters.assigner)
-      && (appliedFilters.status === 'all' || item.status === appliedFilters.status)
-      && (!appliedFilters.from || assignedDate >= appliedFilters.from)
-      && (!appliedFilters.to || assignedDate <= appliedFilters.to)
-  }), [activeTab, appliedFilters, assignments, globalSearch])
-
-  const totalPages = Math.max(1, Math.ceil(filteredAssignments.length / pageSize))
-  const pageAssignments = filteredAssignments.slice((page - 1) * pageSize, page * pageSize)
-  const detailAssignment = assignments.find((item) => item.id === detailId) || null
-  const pendingCount = assignments.filter((item) => item.status === 'PENDING').length
+  const receiverUser = useMemo(() => {
+    const officer = officers.find((item) => item.id === currentAssigneeId)
+    if (!officer) return fallbackUser
+    return { initials: getInitials(officer.name), name: officer.name, role: 'Cán bộ xử lý' }
+  }, [officers])
 
   useEffect(() => {
-    if (page > totalPages) setPage(totalPages)
-  }, [page, totalPages])
+    dispatch(fetchMyAssignments(queryParams))
+  }, [dispatch, queryParams])
 
   useEffect(() => {
-    setDetailId(null)
-  }, [activeTab, appliedFilters, globalSearch, page, pageSize])
+    dispatch(fetchMyAssignmentSummary())
+    getOfficers().then(setOfficers).catch(() => setOfficers([]))
+  }, [dispatch])
+
+  useEffect(() => {
+    dispatch(clearAssignmentDetail())
+  }, [activeTab, appliedFilters, globalSearch, page, pageSize, dispatch])
 
   useEffect(() => {
     if (!toast) return undefined
-    const timer = window.setTimeout(() => setToast(''), 4000)
+    const timer = window.setTimeout(() => setToast(''), 4500)
     return () => window.clearTimeout(timer)
   }, [toast])
 
-  const confirmAccept = () => {
-    dispatch(acceptAssignment({ id: detailId, acceptedAt: new Date().toISOString() }))
-    setAcceptModalOpen(false)
-    setToast('Đã xác nhận nhận việc.')
+  const refreshData = async (detailId) => {
+    await Promise.all([
+      dispatch(fetchMyAssignments(queryParams)),
+      dispatch(fetchMyAssignmentSummary()),
+      detailId ? dispatch(fetchAssignmentDetail(detailId)) : Promise.resolve(),
+    ])
   }
 
-  const confirmReject = () => {
-    dispatch(rejectAssignment({
-      id: detailId,
-      rejectedAt: new Date().toISOString(),
-      rejectionReason: rejectReason.trim(),
-    }))
-    setRejectModalOpen(false)
-    setRejectReason('')
-    setToast('Đã từ chối công việc.')
+  const confirmAccept = async () => {
+    if (!detail) return
+    setActionMessage('')
+    try {
+      await dispatch(confirmAssignment(detail.id)).unwrap()
+      setAcceptModalOpen(false)
+      setToast('Đã xác nhận nhận việc.')
+      await refreshData(detail.id)
+    } catch (error) {
+      setAcceptModalOpen(false)
+      setActionMessage(typeof error === 'string' ? error : 'Không thể xác nhận nhận việc.')
+    }
+  }
+
+  const confirmReject = async () => {
+    if (!detail || !rejectReason.trim()) return
+    setActionMessage('')
+    try {
+      await dispatch(declineAssignment({ id: detail.id, reason: rejectReason.trim() })).unwrap()
+      setRejectModalOpen(false)
+      setRejectReason('')
+      setToast('Đã từ chối công việc.')
+      await refreshData(detail.id)
+    } catch (error) {
+      setRejectModalOpen(false)
+      setActionMessage(typeof error === 'string' ? error : 'Không thể từ chối công việc.')
+    }
+  }
+
+  const openDetail = (id) => {
+    setActionMessage('')
+    dispatch(fetchAssignmentDetail(id))
   }
 
   const openLatestNotification = () => {
-    const latestPending = assignments.find((item) => item.status === 'PENDING')
-    if (latestPending) setDetailId(latestPending.id)
+    const latestPending = myList.items.find((item) => item.status === 'PENDING')
+    if (latestPending) openDetail(latestPending.id)
   }
 
   return (
     <div className={`app-shell processing-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       <Sidebar user={receiverUser} />
       <div className="app-main">
-        <Header
-          showBreadcrumb={false}
-          onSearch={setGlobalSearch}
-          onNotificationClick={openLatestNotification}
-          notificationCount={pendingCount}
-          user={receiverUser}
-        />
+        <Header showBreadcrumb={false} onSearch={setGlobalSearch} onNotificationClick={openLatestNotification} notificationCount={mySummary.pending} user={receiverUser} />
         <main className="w-full px-4 pb-10 pt-4 sm:px-5 xl:px-6">
           <header className="mb-4">
             <h1 className="text-2xl font-bold tracking-tight text-slate-950 lg:text-[29px]">Việc được giao</h1>
             <p className="mt-1 text-sm text-slate-500">Danh sách công việc được phân công cho bạn.</p>
           </header>
 
-          <div className={`grid items-start gap-3 ${detailAssignment ? 'xl:grid-cols-[minmax(0,1fr)_420px]' : 'grid-cols-1'}`}>
+          {loading.my && <div className="mb-3 flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700"><LoaderCircle size={18} className="animate-spin" /> Đang tải danh sách công việc...</div>}
+          {(errors.my || errors.mySummary) && <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"><span className="flex items-center gap-2"><AlertCircle size={18} />{errors.my || errors.mySummary}</span><button type="button" className="font-semibold underline" onClick={() => { dispatch(fetchMyAssignments(queryParams)); dispatch(fetchMyAssignmentSummary()) }}>Thử lại</button></div>}
+          {(actionMessage || errors.detail) && <div className="mb-3 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"><AlertCircle size={18} />{actionMessage || errors.detail}</div>}
+
+          <div className={`grid items-start gap-3 ${detail ? 'xl:grid-cols-[minmax(0,1fr)_420px]' : 'grid-cols-1'}`}>
             <div className="min-w-0 space-y-3">
-              <AssignedWorkSummary assignments={assignments} />
-              <AssignedWorkTabs assignments={assignments} activeTab={activeTab} onChange={(tab) => { setPage(1); setActiveTab(tab) }} />
+              <AssignedWorkSummary summary={mySummary} />
+              <AssignedWorkTabs summary={mySummary} activeTab={activeTab} onChange={(tab) => { setPage(1); setActiveTab(tab) }} />
               <AssignedWorkFilter
                 filters={draftFilters}
-                assigners={assigners}
+                assigners={officers}
                 onChange={(key, value) => setDraftFilters((current) => ({ ...current, [key]: value }))}
-                onApply={() => {
-                  setPage(1)
-                  setAppliedFilters({ ...draftFilters })
-                }}
+                onApply={() => { setPage(1); setAppliedFilters({ ...draftFilters }) }}
               />
               <AssignedWorkTable
-                assignments={pageAssignments}
-                totalCount={filteredAssignments.length}
+                assignments={myList.items}
+                totalCount={myList.total}
                 page={page}
                 pageSize={pageSize}
-                onView={setDetailId}
+                onView={openDetail}
                 onPageChange={setPage}
                 onPageSizeChange={(size) => { setPage(1); setPageSize(size) }}
               />
             </div>
 
-            <AssignedWorkDetailPanel
-              assignment={detailAssignment}
-              onClose={() => setDetailId(null)}
-              onAccept={() => setAcceptModalOpen(true)}
-              onReject={() => setRejectModalOpen(true)}
-            />
+            {loading.detail && !detail
+              ? <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-600"><LoaderCircle size={18} className="animate-spin" /> Đang tải chi tiết...</div>
+              : <AssignedWorkDetailPanel assignment={detail} onClose={() => dispatch(clearAssignmentDetail())} onAccept={() => setAcceptModalOpen(true)} onReject={() => setRejectModalOpen(true)} />}
           </div>
         </main>
       </div>
 
-      <AcceptWorkModal open={acceptModalOpen} onCancel={() => setAcceptModalOpen(false)} onConfirm={confirmAccept} />
-      <RejectWorkModal
-        open={rejectModalOpen}
-        reason={rejectReason}
-        onReasonChange={setRejectReason}
-        onCancel={() => { setRejectModalOpen(false); setRejectReason('') }}
-        onConfirm={confirmReject}
-      />
+      <AcceptWorkModal open={acceptModalOpen} submitting={loading.action} onCancel={() => setAcceptModalOpen(false)} onConfirm={confirmAccept} />
+      <RejectWorkModal open={rejectModalOpen} reason={rejectReason} submitting={loading.action} onReasonChange={setRejectReason} onCancel={() => { setRejectModalOpen(false); setRejectReason('') }} onConfirm={confirmReject} />
 
-      {toast && (
-        <div className="fixed bottom-5 right-5 z-[80] flex max-w-sm items-center gap-3 rounded-lg border border-emerald-200 bg-white px-4 py-3 text-sm font-semibold text-emerald-700 shadow-xl" role="status">
-          <CheckCircle2 size={20} className="shrink-0" />
-          <span>{toast}</span>
-          <button type="button" aria-label="Đóng thông báo" className="ml-2 text-slate-400 hover:text-slate-600" onClick={() => setToast('')}><X size={17} /></button>
-        </div>
-      )}
+      {toast && <div className="fixed bottom-5 right-5 z-[80] flex max-w-sm items-center gap-3 rounded-lg border border-emerald-200 bg-white px-4 py-3 text-sm font-semibold text-emerald-700 shadow-xl" role="status"><CheckCircle2 size={20} className="shrink-0" /><span>{toast}</span><button type="button" aria-label="Đóng thông báo" className="ml-2 text-slate-400 hover:text-slate-600" onClick={() => setToast('')}><X size={17} /></button></div>}
     </div>
   )
 }

@@ -1,5 +1,5 @@
-import { CheckCircle2, ChevronDown, Download, FileSpreadsheet, FileText, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { AlertCircle, CheckCircle2, ChevronDown, Download, FileSpreadsheet, FileText, LoaderCircle, X } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import AttentionCasesTable from '../components/reports/AttentionCasesTable'
@@ -13,19 +13,63 @@ import RiskDistributionChart from '../components/reports/RiskDistributionChart'
 import StatusDistributionChart from '../components/reports/StatusDistributionChart'
 import Header from '../components/layout/Header'
 import Sidebar from '../components/layout/Sidebar'
-import {
-  attentionCases,
-  departmentData,
-  fieldData,
-  officerData,
-  reportFilterOptions,
-  reportSummary,
-  riskData,
-  statusData,
-  trendData,
-} from '../data/mockReport'
+import { departmentData, officerData, reportFilterOptions, riskData, trendData } from '../data/mockReport'
+import { getReportDashboardData } from '../services/dashboardService'
+import { getApiErrorMessage } from '../services/serviceUtils'
 
 const emptyFilters = { from: '', to: '', field: 'all', department: 'all', officer: 'all' }
+const statusColors = ['#1677ff', '#f59e0b', '#22c55e', '#8b5cf6', '#ef4444', '#06b6d4']
+const statusDots = ['bg-blue-500', 'bg-amber-500', 'bg-green-500', 'bg-violet-500', 'bg-red-500', 'bg-cyan-500']
+
+function riskLabel(remainingSeconds, overdue) {
+  if (overdue || remainingSeconds <= 0) return 'Rất cao'
+  if (remainingSeconds <= 86400) return 'Cao'
+  if (remainingSeconds <= 3 * 86400) return 'Trung bình'
+  return 'Thấp'
+}
+
+function remainingLabel(seconds, overdue) {
+  const absoluteSeconds = Math.abs(seconds)
+  const hours = Math.ceil(absoluteSeconds / 3600)
+  if (overdue) return `Quá hạn ${hours} giờ`
+  if (hours < 24) return `${hours} giờ`
+  return `${Math.ceil(hours / 24)} ngày`
+}
+
+function mapAttentionCase(item) {
+  const seconds = item.remaining_seconds
+  return {
+    id: item.case_code,
+    procedure: item.procedure_name,
+    officer: item.officer_name || 'Chưa phân công',
+    remaining: remainingLabel(seconds, item.is_overdue),
+    remainingHours: Math.floor(seconds / 3600),
+    risk: riskLabel(seconds, item.is_overdue),
+    status: item.status,
+  }
+}
+
+function mapReportData(data) {
+  const statusCount = (label) => data.statuses.find((item) => item.status === label)?.count || 0
+  const summary = [
+    { id: 'total', label: 'Tổng hồ sơ', value: data.summary.total_cases, change: null, tone: 'blue' },
+    { id: 'processing', label: 'Đang xử lý', value: data.summary.processing_cases, change: null, tone: 'amber' },
+    { id: 'completed', label: 'Đã hoàn thành', value: data.summary.completed_cases, change: null, tone: 'emerald' },
+    { id: 'risk', label: 'Nguy cơ trễ hạn', value: data.summary.overdue_cases, change: null, tone: 'red' },
+    { id: 'waiting', label: 'Chờ xác nhận', value: statusCount('Chờ xác nhận'), change: null, tone: 'violet' },
+    { id: 'confirmed', label: 'Đã xác nhận', value: statusCount('Đã xác nhận'), change: null, tone: 'cyan' },
+  ]
+  const statuses = data.statuses.map((item, index) => ({
+    name: item.status,
+    value: item.count,
+    color: statusColors[index % statusColors.length],
+    dotClass: statusDots[index % statusDots.length],
+  }))
+  const fields = data.fields.map((item) => ({ name: item.field_name, value: item.count }))
+  const attentionMap = new Map([...data.overdue, ...data.nearDeadline].map((item) => [item.id, item]))
+  const attention = [...attentionMap.values()].map(mapAttentionCase)
+  return { summary, statuses, fields, attention }
+}
 
 export default function Reports() {
   const navigate = useNavigate()
@@ -34,6 +78,25 @@ export default function Reports() {
   const [quickFilter, setQuickFilter] = useState('30 ngày')
   const [exportOpen, setExportOpen] = useState(false)
   const [toast, setToast] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [reportData, setReportData] = useState({ summary: [], statuses: [], fields: [], attention: [] })
+
+  const loadReport = useCallback(async () => {
+    setLoading(true)
+    setError('')
+    try {
+      setReportData(mapReportData(await getReportDashboardData()))
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, 'Không thể tải dữ liệu báo cáo. Vui lòng thử lại.'))
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadReport()
+  }, [loadReport])
 
   useEffect(() => {
     if (!toast) return undefined
@@ -41,7 +104,7 @@ export default function Reports() {
     return () => window.clearTimeout(timer)
   }, [toast])
 
-  const showMockMessage = (message) => {
+  const showPendingFeature = (message) => {
     setToast(message)
     setExportOpen(false)
   }
@@ -56,9 +119,12 @@ export default function Reports() {
             <div><p className="mb-2 text-xs text-slate-500">Trang chủ <span className="mx-1">›</span> Báo cáo thống kê</p><h1 className="text-2xl font-bold tracking-tight text-slate-950 lg:text-[29px]">Báo cáo thống kê</h1><p className="mt-1 text-sm text-slate-500">Tổng hợp và theo dõi tình hình xử lý hồ sơ.</p></div>
             <div className="relative shrink-0">
               <button type="button" aria-expanded={exportOpen} className="flex h-10 items-center gap-2 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-blue-700" onClick={() => setExportOpen((open) => !open)}><Download size={17} /> Xuất báo cáo <ChevronDown size={15} /></button>
-              {exportOpen && <div className="absolute right-0 top-12 z-30 w-44 rounded-lg border border-slate-200 bg-white p-1.5 shadow-xl"><button type="button" className="flex h-9 w-full items-center gap-2 rounded-md px-3 text-left text-sm text-slate-700 hover:bg-slate-50" onClick={() => showMockMessage('Chức năng xuất báo cáo sẽ được kết nối backend sau.')}><FileSpreadsheet size={16} className="text-emerald-600" /> Xuất Excel</button><button type="button" className="flex h-9 w-full items-center gap-2 rounded-md px-3 text-left text-sm text-slate-700 hover:bg-slate-50" onClick={() => showMockMessage('Chức năng xuất báo cáo sẽ được kết nối backend sau.')}><FileText size={16} className="text-red-500" /> Xuất PDF</button></div>}
+              {exportOpen && <div className="absolute right-0 top-12 z-30 w-44 rounded-lg border border-slate-200 bg-white p-1.5 shadow-xl"><button type="button" className="flex h-9 w-full items-center gap-2 rounded-md px-3 text-left text-sm text-slate-700 hover:bg-slate-50" onClick={() => showPendingFeature('Backend chưa có API xuất Excel.')}><FileSpreadsheet size={16} className="text-emerald-600" /> Xuất Excel</button><button type="button" className="flex h-9 w-full items-center gap-2 rounded-md px-3 text-left text-sm text-slate-700 hover:bg-slate-50" onClick={() => showPendingFeature('Backend chưa có API xuất PDF.')}><FileText size={16} className="text-red-500" /> Xuất PDF</button></div>}
             </div>
           </header>
+
+          {loading && <div className="mb-3 flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700"><LoaderCircle size={18} className="animate-spin" /> Đang tải dữ liệu báo cáo...</div>}
+          {error && <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"><span className="flex items-center gap-2"><AlertCircle size={18} />{error}</span><button type="button" className="font-semibold underline" onClick={loadReport}>Thử lại</button></div>}
 
           <div className="space-y-3">
             <ReportFilterBar
@@ -66,26 +132,26 @@ export default function Reports() {
               options={reportFilterOptions}
               quickFilter={quickFilter}
               onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
-              onQuickFilter={(value) => { setQuickFilter(value); setToast(`Đã chọn khoảng thời gian: ${value}.`) }}
-              onApply={() => setToast('Đã áp dụng bộ lọc báo cáo mock.')}
+              onQuickFilter={(value) => { setQuickFilter(value); setToast(`Đã chọn khoảng thời gian: ${value}. Backend hiện chưa hỗ trợ lọc dashboard theo thời gian.`) }}
+              onApply={() => setToast('Backend dashboard hiện chưa hỗ trợ các tham số lọc báo cáo.')}
               onReset={() => { setFilters(emptyFilters); setQuickFilter('30 ngày'); setToast('Đã đặt lại bộ lọc.') }}
             />
 
-            <ReportSummaryCards data={reportSummary} />
+            <ReportSummaryCards data={reportData.summary} />
 
             <section className="grid items-stretch gap-3 xl:grid-cols-[1.35fr_0.9fr_0.9fr]" aria-label="Biểu đồ báo cáo chính">
               <CaseTrendChart data={trendData} />
-              <StatusDistributionChart data={statusData} total={1248} />
+              <StatusDistributionChart data={reportData.statuses} total={reportData.summary[0]?.value || 0} />
               <RiskDistributionChart data={riskData} />
             </section>
 
             <section className="grid items-stretch gap-3 xl:grid-cols-[0.8fr_1.25fr_1fr]" aria-label="Thống kê chi tiết">
-              <FieldStatisticsChart data={fieldData} />
+              <FieldStatisticsChart data={reportData.fields} />
               <DepartmentStatisticsTable data={departmentData} />
               <OfficerWorkloadTable data={officerData} />
             </section>
 
-            <AttentionCasesTable cases={attentionCases} onView={(caseId) => navigate('/cases/processing', { state: { caseId } })} />
+            <AttentionCasesTable cases={reportData.attention} onView={(caseId) => navigate('/cases/processing', { state: { caseId } })} />
           </div>
         </main>
       </div>

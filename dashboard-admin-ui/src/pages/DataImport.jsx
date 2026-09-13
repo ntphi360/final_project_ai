@@ -1,5 +1,5 @@
-import { CheckCircle2, Info, LoaderCircle, Play, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { AlertCircle, CheckCircle2, Info, LoaderCircle, Play, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import ImportDropzone from '../components/data-import/ImportDropzone'
 import ImportErrorModal from '../components/data-import/ImportErrorModal'
@@ -8,14 +8,15 @@ import ImportHistoryTable from '../components/data-import/ImportHistoryTable'
 import ImportSummary from '../components/data-import/ImportSummary'
 import Header from '../components/layout/Header'
 import Sidebar from '../components/layout/Sidebar'
-import { initialImportHistory, mockImportErrors } from '../data/mockImports'
+import { initialImportHistory } from '../data/mockImports'
+import { importCases } from '../services/importService'
+import { getApiErrorMessage } from '../services/serviceUtils'
 
 const allowedExtensions = ['.csv', '.xlsx', '.xls']
 const maxFileSize = 20 * 1024 * 1024
 
 export default function DataImport() {
   const { sidebarCollapsed } = useSelector((state) => state.ui)
-  const timerRef = useRef(null)
   const [selectedFile, setSelectedFile] = useState(null)
   const [fileError, setFileError] = useState('')
   const [processing, setProcessing] = useState(false)
@@ -25,10 +26,9 @@ export default function DataImport() {
   const [detailId, setDetailId] = useState(null)
   const [visibleErrors, setVisibleErrors] = useState(null)
   const [toast, setToast] = useState('')
+  const [apiError, setApiError] = useState('')
 
   const detailItem = history.find((item) => item.id === detailId) || null
-
-  useEffect(() => () => window.clearTimeout(timerRef.current), [])
 
   useEffect(() => {
     if (!toast) return undefined
@@ -52,31 +52,46 @@ export default function DataImport() {
     }
     setSelectedFile(file)
     setFileError('')
+    setApiError('')
     setResult(null)
   }
 
-  const processImport = () => {
+  const processImport = async () => {
     if (!selectedFile || fileError || processing) return
     setProcessing(true)
-    timerRef.current = window.setTimeout(() => {
+    setApiError('')
+    try {
+      const data = await importCases(selectedFile)
       const importedAt = new Date().toISOString()
+      const errors = data.error_records > 0
+        ? [{ row: '—', message: `Backend ghi nhận ${data.error_records} bản ghi lỗi nhưng chưa trả chi tiết từng dòng.` }]
+        : []
+      const skippedRows = data.unmapped_relation_records
       const importResult = {
         id: `IMP-${Date.now()}`,
         fileName: selectedFile.name,
         importedAt,
-        totalRows: 1250,
-        successRows: 1220,
-        skippedRows: 20,
-        errorRows: 10,
-        status: 'PARTIAL',
-        errors: mockImportErrors,
+        totalRows: data.total_records,
+        successRows: data.inserted_records + data.updated_records,
+        skippedRows,
+        errorRows: data.error_records,
+        status: data.error_records > 0 || skippedRows > 0 ? 'PARTIAL' : 'SUCCESS',
+        errors,
+        insertedRows: data.inserted_records,
+        updatedRows: data.updated_records,
+        fieldMismatchRows: data.field_mismatch_records,
+        completedRows: data.completed_records,
+        processingRows: data.processing_records,
       }
       setResult(importResult)
       setHistory((current) => [importResult, ...current])
       setHistoryPage(1)
+      setToast(`Import hoàn tất: thêm ${data.inserted_records}, cập nhật ${data.updated_records}, lỗi ${data.error_records}.`)
+    } catch (error) {
+      setApiError(getApiErrorMessage(error, 'Không thể import dữ liệu. Vui lòng kiểm tra file và thử lại.'))
+    } finally {
       setProcessing(false)
-      setToast('Đã xử lý dữ liệu và cập nhật lịch sử import.')
-    }, 1200)
+    }
   }
 
   return (
@@ -92,7 +107,8 @@ export default function DataImport() {
 
           <div className="grid items-start gap-4 lg:grid-cols-[minmax(300px,35fr)_minmax(0,65fr)]">
             <div className="space-y-3">
-              <ImportDropzone file={selectedFile} error={fileError} onSelect={validateFile} onRemove={() => { setSelectedFile(null); setFileError(''); setResult(null) }} />
+              {apiError && <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-700"><AlertCircle size={18} className="mt-0.5 shrink-0" /><span>{apiError}</span></div>}
+              <ImportDropzone file={selectedFile} error={fileError} onSelect={validateFile} onRemove={() => { setSelectedFile(null); setFileError(''); setApiError(''); setResult(null) }} />
               <button type="button" disabled={!selectedFile || Boolean(fileError) || processing} className="flex h-11 w-full items-center justify-center gap-2 rounded-md bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300" onClick={processImport}>
                 {processing ? <><LoaderCircle size={18} className="animate-spin" /> Đang xử lý...</> : <><Play size={18} /> Xử lý dữ liệu</>}
               </button>

@@ -79,7 +79,7 @@ export default function CaseTable({
                       onChange={() => onToggleCase(item.id)}
                     />
                   </td>
-                  <td><span className="case-code">{item.id}</span></td>
+                  <td><span className="case-code">{item.caseCode}</span></td>
                   <td><span className="table-ellipsis procedure-name" title={item.procedure}>{item.procedure}</span></td>
                   <td><span className="table-ellipsis" title={item.field}>{item.field}</span></td>
                   <td><span className="table-ellipsis" title={item.department}>{item.department}</span></td>
