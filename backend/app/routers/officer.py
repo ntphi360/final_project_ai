@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database.database import getDb
+from app.auth_dependencies import requireRoles
 from app.schemas.field import FieldResponse
 from app.schemas.officer import (
     OfficerFieldAssignmentResponse,
@@ -24,6 +25,7 @@ from app.services.officer_service import (
 router = APIRouter(
     prefix="/api/officers",
     tags=["Officers"],
+    dependencies=[Depends(requireRoles("ADMIN", "SUPERVISOR", "OFFICER"))],
 )
 
 
@@ -65,6 +67,7 @@ def listFieldsByOfficer(
 @router.post(
     "/{officer_id}/fields/{field_id}",
     response_model=OfficerFieldAssignmentResponse,
+    dependencies=[Depends(requireRoles("ADMIN", "SUPERVISOR"))],
 )
 def assignFieldToOfficer(
     officer_id: int,
@@ -92,6 +95,7 @@ def assignFieldToOfficer(
 @router.delete(
     "/{officer_id}/fields/{field_id}",
     response_model=dict[str, str],
+    dependencies=[Depends(requireRoles("ADMIN", "SUPERVISOR"))],
 )
 def removeFieldFromOfficer(
     officer_id: int,

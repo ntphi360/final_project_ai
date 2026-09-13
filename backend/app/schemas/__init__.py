@@ -25,6 +25,8 @@ from app.schemas.officer import (
     OfficerWithFieldsResponse,
 )
 from app.schemas.procedure import ProcedureResponse
+from app.schemas.auth import LoginRequest, LoginResponse
+from app.schemas.user import UserCreate, UserPasswordReset, UserResponse, UserStatusUpdate, UserUpdate
 
 __all__ = [
     "CaseResponse",
@@ -46,4 +48,11 @@ __all__ = [
     "FieldDistributionResponse",
     "RecentCaseResponse",
     "DashboardCaseItem",
+    "LoginRequest",
+    "LoginResponse",
+    "UserCreate",
+    "UserUpdate",
+    "UserStatusUpdate",
+    "UserPasswordReset",
+    "UserResponse",
 ]

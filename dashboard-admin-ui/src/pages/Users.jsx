@@ -1,5 +1,5 @@
-import { CheckCircle2, UserPlus, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { AlertCircle, CheckCircle2, LoaderCircle, UserPlus, X } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSelector } from 'react-redux'
 import Header from '../components/layout/Header'
 import Sidebar from '../components/layout/Sidebar'
@@ -10,7 +10,9 @@ import UserFormModal from '../components/users/UserFormModal'
 import UserStatusConfirmModal from '../components/users/UserStatusConfirmModal'
 import UserSummaryCards from '../components/users/UserSummaryCards'
 import UserTable from '../components/users/UserTable'
-import { currentUserId, departments, initialUsers } from '../data/mockUsers'
+import { getOfficers } from '../services/officerService'
+import { getApiErrorMessage } from '../services/serviceUtils'
+import { createUser, getUserById, getUsers, resetUserPassword, updateUser, updateUserStatus } from '../services/userService'
 
 const emptyFilters = { query: '', role: 'all', department: 'all', status: 'all' }
 
@@ -20,7 +22,13 @@ function normalize(value) {
 
 export default function Users() {
   const { sidebarCollapsed } = useSelector((state) => state.ui)
-  const [users, setUsers] = useState(initialUsers)
+  const currentUserId = useSelector((state) => state.auth.user?.id)
+  const [users, setUsers] = useState([])
+  const [officers, setOfficers] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [actionError, setActionError] = useState('')
+  const [saving, setSaving] = useState(false)
   const [draftFilters, setDraftFilters] = useState(emptyFilters)
   const [appliedFilters, setAppliedFilters] = useState(emptyFilters)
   const [page, setPage] = useState(1)
@@ -31,6 +39,22 @@ export default function Users() {
   const [statusTargetId, setStatusTargetId] = useState(null)
   const [resetTargetId, setResetTargetId] = useState(null)
   const [toast, setToast] = useState('')
+
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    setLoadError('')
+    try {
+      const [userItems, officerItems] = await Promise.all([getUsers(), getOfficers()])
+      setUsers(userItems)
+      setOfficers(officerItems)
+    } catch (error) {
+      setLoadError(getApiErrorMessage(error, 'Không thể tải danh sách người dùng.'))
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { loadData() }, [loadData])
 
   const filteredUsers = useMemo(() => users.filter((user) => {
     const query = normalize(appliedFilters.query)
@@ -59,41 +83,67 @@ export default function Users() {
   }, [toast])
 
   const openAddForm = () => {
+    setActionError('')
     setFormMode('add')
     setFormUserId(null)
   }
 
   const openEditForm = (userId) => {
+    setActionError('')
     setFormMode('edit')
     setFormUserId(userId)
   }
 
-  const saveUser = (form) => {
-    const now = new Date().toISOString()
-    const safeForm = { ...form }
-    delete safeForm.password
-    if (formMode === 'add') {
-      const nextId = Math.max(...users.map((user) => user.id)) + 1
-      const newUser = { ...safeForm, id: nextId, createdAt: now, updatedAt: now }
-      setUsers((current) => [newUser, ...current])
-      setDetailId(nextId)
-      setToast('Đã thêm người dùng mới.')
-    } else {
-      const protectedForm = formUserId === currentUserId ? { ...safeForm, isActive: true } : safeForm
-      setUsers((current) => current.map((user) => user.id === formUserId ? { ...user, ...protectedForm, updatedAt: now } : user))
-      setDetailId(formUserId)
-      setToast('Đã cập nhật thông tin người dùng.')
+  const saveUser = async (form) => {
+    setSaving(true)
+    setActionError('')
+    try {
+      const saved = formMode === 'add' ? await createUser(form) : await updateUser(formUserId, form)
+      await loadData()
+      setDetailId(saved.id)
+      setFormMode(null)
+      setFormUserId(null)
+      setToast(formMode === 'add' ? 'Đã thêm người dùng mới.' : 'Đã cập nhật thông tin người dùng.')
+    } catch (error) {
+      setActionError(getApiErrorMessage(error, 'Không thể lưu người dùng.'))
+    } finally {
+      setSaving(false)
     }
-    setFormMode(null)
-    setFormUserId(null)
   }
 
-  const confirmStatusChange = () => {
+  const confirmStatusChange = async () => {
     if (!statusTarget || (statusTarget.id === currentUserId && statusTarget.isActive)) return
-    const nextActive = !statusTarget.isActive
-    setUsers((current) => current.map((user) => user.id === statusTarget.id ? { ...user, isActive: nextActive, updatedAt: new Date().toISOString() } : user))
-    setToast(nextActive ? 'Đã mở khóa tài khoản.' : 'Đã khóa tài khoản.')
-    setStatusTargetId(null)
+    setSaving(true)
+    try {
+      const nextActive = !statusTarget.isActive
+      await updateUserStatus(statusTarget.id, nextActive)
+      await loadData()
+      setToast(nextActive ? 'Đã mở khóa tài khoản.' : 'Đã khóa tài khoản.')
+      setStatusTargetId(null)
+    } catch (error) {
+      setActionError(getApiErrorMessage(error, 'Không thể cập nhật trạng thái tài khoản.'))
+    } finally { setSaving(false) }
+  }
+
+  const openDetail = async (userId) => {
+    setActionError('')
+    try {
+      const user = await getUserById(userId)
+      setUsers((current) => current.map((item) => item.id === user.id ? user : item))
+      setDetailId(user.id)
+    } catch (error) { setActionError(getApiErrorMessage(error, 'Không thể tải chi tiết người dùng.')) }
+  }
+
+  const confirmPasswordReset = async (password) => {
+    if (!resetTarget) return
+    setSaving(true)
+    setActionError('')
+    try {
+      await resetUserPassword(resetTarget.id, password)
+      setResetTargetId(null)
+      setToast('Đã đặt lại mật khẩu.')
+    } catch (error) { setActionError(getApiErrorMessage(error, 'Không thể đặt lại mật khẩu.')) }
+    finally { setSaving(false) }
   }
 
   const resetFilters = () => {
@@ -110,17 +160,19 @@ export default function Users() {
         <main className="min-w-0 px-4 pb-10 pt-4 sm:px-5 xl:px-6">
           <header className="mb-4 flex items-start justify-between gap-4"><div><h1 className="text-2xl font-bold tracking-tight text-slate-950 lg:text-[29px]">Quản lý người dùng</h1><p className="mt-1 text-sm text-slate-500">Quản lý tài khoản và quyền truy cập hệ thống.</p></div><button type="button" className="flex h-10 shrink-0 items-center gap-2 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-blue-700" onClick={openAddForm}><UserPlus size={18} /> Thêm người dùng</button></header>
           <div className="space-y-3">
+            {loading && <div className="flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700"><LoaderCircle size={18} className="animate-spin" /> Đang tải người dùng...</div>}
+            {(loadError || actionError) && <div className="flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"><span className="flex items-center gap-2"><AlertCircle size={18} />{loadError || actionError}</span>{loadError && <button type="button" className="font-semibold underline" onClick={loadData}>Thử lại</button>}</div>}
             <UserSummaryCards users={users} />
-            <UserFilterBar filters={draftFilters} departments={departments} onChange={(key, value) => setDraftFilters((current) => ({ ...current, [key]: value }))} onApply={() => { setPage(1); setAppliedFilters({ ...draftFilters }) }} onReset={resetFilters} />
-            <UserTable users={pageUsers} totalCount={filteredUsers.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={(size) => { setPage(1); setPageSize(size) }} onView={setDetailId} />
+            <UserFilterBar filters={draftFilters} officers={[...new Set(users.map((item) => item.officerName).filter(Boolean))]} onChange={(key, value) => setDraftFilters((current) => ({ ...current, [key]: value }))} onApply={() => { setPage(1); setAppliedFilters({ ...draftFilters }) }} onReset={resetFilters} />
+            <UserTable users={pageUsers} totalCount={filteredUsers.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={(size) => { setPage(1); setPageSize(size) }} onView={openDetail} />
           </div>
         </main>
       </div>
 
-      <UserDetailPanel user={detailUser} onClose={() => setDetailId(null)} onEdit={() => openEditForm(detailUser.id)} onToggleStatus={() => setStatusTargetId(detailUser.id)} onResetPassword={() => setResetTargetId(detailUser.id)} />
-      <UserFormModal open={Boolean(formMode)} mode={formMode} user={formUser} users={users} onClose={() => { setFormMode(null); setFormUserId(null) }} onSave={saveUser} />
+      <UserDetailPanel user={detailUser} currentUserId={currentUserId} onClose={() => setDetailId(null)} onEdit={() => openEditForm(detailUser.id)} onToggleStatus={() => setStatusTargetId(detailUser.id)} onResetPassword={() => setResetTargetId(detailUser.id)} />
+      <UserFormModal open={Boolean(formMode)} mode={formMode} user={formUser} users={users} officers={officers} currentUserId={currentUserId} saving={saving} apiError={actionError} onClose={() => { setFormMode(null); setFormUserId(null); setActionError('') }} onSave={saveUser} />
       <UserStatusConfirmModal user={statusTarget} onCancel={() => setStatusTargetId(null)} onConfirm={confirmStatusChange} />
-      <ResetPasswordModal user={resetTarget} onCancel={() => setResetTargetId(null)} onConfirm={() => { setResetTargetId(null); setToast('Đã tạo mật khẩu tạm thời.') }} />
+      <ResetPasswordModal user={resetTarget} loading={saving} error={actionError} onCancel={() => { setResetTargetId(null); setActionError('') }} onConfirm={confirmPasswordReset} />
 
       {toast && <div className="fixed bottom-5 right-5 z-[100] flex max-w-sm items-center gap-3 rounded-lg border border-emerald-200 bg-white px-4 py-3 text-sm font-semibold text-emerald-700 shadow-xl" role="status"><CheckCircle2 size={20} className="shrink-0" /><span>{toast}</span><button type="button" aria-label="Đóng thông báo" className="ml-2 text-slate-400 hover:text-slate-600" onClick={() => setToast('')}><X size={17} /></button></div>}
     </div>

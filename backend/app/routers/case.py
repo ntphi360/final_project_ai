@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.database.database import getDb
+from app.auth_dependencies import requireRoles
 from app.schemas.case import CaseDetailResponse, CaseResponse
 from app.services.case_service import (
     getCaseById,
@@ -16,6 +17,7 @@ from app.services.case_service import (
 router = APIRouter(
     prefix="/api/cases",
     tags=["Cases"],
+    dependencies=[Depends(requireRoles("ADMIN", "SUPERVISOR", "OFFICER", "VIEWER"))],
 )
 
 PaginationSkip = Annotated[int, Query(ge=0)]

@@ -16,6 +16,7 @@ from app.models import (
     Officer,
     OfficerField,
     Procedure,
+    User,
 )
 
 

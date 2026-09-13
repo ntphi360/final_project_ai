@@ -10,7 +10,6 @@ import AssignedWorkTabs from '../components/assigned-work/AssignedWorkTabs'
 import RejectWorkModal from '../components/assigned-work/RejectWorkModal'
 import Header from '../components/layout/Header'
 import Sidebar from '../components/layout/Sidebar'
-import { currentAssigneeId } from '../config/currentIdentity'
 import {
   clearAssignmentDetail,
   confirmAssignment,
@@ -21,12 +20,6 @@ import {
 } from '../features/assignments/assignmentsSlice'
 
 const emptyFilters = { query: '', assignerId: 'all', status: 'all', fromDate: '', toDate: '' }
-const fallbackUser = { initials: 'CB', name: 'Cán bộ nhận việc', role: 'Cán bộ xử lý' }
-
-function getInitials(name) {
-  return name.split(/\s+/).filter(Boolean).slice(-2).map((part) => part[0]).join('').toUpperCase()
-}
-
 export default function AssignedWork() {
   const dispatch = useDispatch()
   const { sidebarCollapsed } = useSelector((state) => state.ui)
@@ -50,12 +43,6 @@ export default function AssignedWork() {
     page,
     pageSize,
   }), [activeTab, appliedFilters, page, pageSize])
-
-  const receiverUser = useMemo(() => {
-    const assignment = myList.items.find((item) => item.assigneeId === currentAssigneeId)
-    if (!assignment) return fallbackUser
-    return { initials: getInitials(assignment.assigneeName), name: assignment.assigneeName, role: 'Cán bộ xử lý' }
-  }, [myList.items])
 
   const assignerOptions = useMemo(() => {
     const uniqueAssigners = new Map()
@@ -135,9 +122,9 @@ export default function AssignedWork() {
 
   return (
     <div className={`app-shell processing-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
-      <Sidebar user={receiverUser} />
+      <Sidebar />
       <div className="app-main">
-        <Header onNotificationClick={openLatestNotification} notificationCount={mySummary.pending} user={receiverUser} />
+        <Header onNotificationClick={openLatestNotification} notificationCount={mySummary.pending} />
         <main className="w-full px-4 pb-10 pt-4 sm:px-5 xl:px-6">
           <header className="mb-4">
             <h1 className="text-2xl font-bold tracking-tight text-slate-950 lg:text-[29px]">Việc được giao</h1>

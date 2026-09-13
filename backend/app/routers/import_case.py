@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, 
 from sqlalchemy.orm import Session
 
 from app.database.database import getDb
+from app.auth_dependencies import requireRoles
 from app.schemas.import_case import (
     ImportCaseResult,
     ImportHistoryDetailResponse,
@@ -22,6 +23,7 @@ from app.services.import_case_service import (
 router = APIRouter(
     prefix="/api/import",
     tags=["Import cases"],
+    dependencies=[Depends(requireRoles("ADMIN", "SUPERVISOR"))],
 )
 
 

@@ -6,6 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.database.database import getDb
+from app.auth_dependencies import requireRoles
+from app.models.user import User
 from app.schemas.assignment import (
     AssignmentCreate,
     AssignmentCreateResponse,
@@ -36,14 +38,18 @@ from app.services.assignment_service import (
 router = APIRouter(prefix="/api/assignments", tags=["Assignments"])
 
 Page = Annotated[int, Query(ge=1)]
+managementOnly = requireRoles("ADMIN", "SUPERVISOR")
+officerOnly = requireRoles("OFFICER")
+assignmentReaders = requireRoles("ADMIN", "SUPERVISOR", "OFFICER")
 
 
 @router.post("", response_model=AssignmentCreateResponse, status_code=201)
 def createAssignmentBatch(
     data: AssignmentCreate,
-    assigner_id: Annotated[int, Query(alias="assignerId", gt=0)],
     db: Session = Depends(getDb),
+    currentUser: User = Depends(managementOnly),
 ):
+    assigner_id = _requireOfficerId(currentUser)
     try:
         assignments, skipped = createAssignments(
             db=db,
@@ -74,7 +80,6 @@ def createAssignmentBatch(
 
 @router.get("/my", response_model=AssignmentListResponse)
 def listMyAssignments(
-    assignee_id: Annotated[int, Query(alias="assigneeId", gt=0)],
     assignment_status: Annotated[
         AssignmentStatusValue | None,
         Query(alias="status"),
@@ -85,7 +90,9 @@ def listMyAssignments(
     page: Page = 1,
     page_size: Annotated[int, Query(alias="pageSize", ge=1, le=100)] = 10,
     db: Session = Depends(getDb),
+    currentUser: User = Depends(officerOnly),
 ):
+    assignee_id = _requireOfficerId(currentUser)
     filters = AssignmentFilters(
         status=assignment_status,
         search=search,
@@ -113,7 +120,11 @@ def getSummary(
     assigner_id: Annotated[int | None, Query(alias="assignerId", gt=0)] = None,
     assignee_id: Annotated[int | None, Query(alias="assigneeId", gt=0)] = None,
     db: Session = Depends(getDb),
+    currentUser: User = Depends(assignmentReaders),
 ):
+    if currentUser.role == "OFFICER":
+        assigner_id = None
+        assignee_id = _requireOfficerId(currentUser)
     return getAssignmentSummary(
         db=db,
         assignerId=assigner_id,
@@ -139,6 +150,7 @@ def listAssignments(
     page: Page = 1,
     page_size: Annotated[int, Query(alias="pageSize", ge=1, le=100)] = 10,
     db: Session = Depends(getDb),
+    currentUser: User = Depends(managementOnly),
 ):
     filters = AssignmentFilters(
         status=assignment_status,
@@ -162,9 +174,16 @@ def listAssignments(
 def getAssignmentDetail(
     assignment_id: int,
     db: Session = Depends(getDb),
+    currentUser: User = Depends(assignmentReaders),
 ):
     try:
-        return getAssignmentById(db=db, assignmentId=assignment_id)
+        assignment = getAssignmentById(db=db, assignmentId=assignment_id)
+        if currentUser.role == "OFFICER" and assignment.assignee_id != _requireOfficerId(currentUser):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Bạn không có quyền xem giao việc này.",
+            )
+        return assignment
     except AssignmentNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -175,9 +194,10 @@ def getAssignmentDetail(
 @router.post("/{assignment_id}/accept", response_model=AssignmentRead)
 def acceptAssignedTask(
     assignment_id: int,
-    assignee_id: Annotated[int, Query(alias="assigneeId", gt=0)],
     db: Session = Depends(getDb),
+    currentUser: User = Depends(officerOnly),
 ):
+    assignee_id = _requireOfficerId(currentUser)
     try:
         return acceptAssignment(
             db=db,
@@ -205,9 +225,10 @@ def acceptAssignedTask(
 def rejectAssignedTask(
     assignment_id: int,
     data: AssignmentReject,
-    assignee_id: Annotated[int, Query(alias="assigneeId", gt=0)],
     db: Session = Depends(getDb),
+    currentUser: User = Depends(officerOnly),
 ):
+    assignee_id = _requireOfficerId(currentUser)
     try:
         return rejectAssignment(
             db=db,
@@ -245,3 +266,12 @@ def _listResponse(
         total=total,
         total_pages=ceil(total / pageSize) if total else 0,
     )
+
+
+def _requireOfficerId(user: User) -> int:
+    if user.officer_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản chưa được liên kết với cán bộ.",
+        )
+    return user.officer_id

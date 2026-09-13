@@ -7,6 +7,7 @@ from app.models.import_history import ImportHistory, ImportHistoryStatus
 from app.models.officer import Officer
 from app.models.officer_field import OfficerField
 from app.models.procedure import Procedure
+from app.models.user import User, UserRole
 
 __all__ = [
     "Case",
@@ -20,4 +21,6 @@ __all__ = [
     "DepartmentField",
     "Officer",
     "OfficerField",
+    "User",
+    "UserRole",
 ]

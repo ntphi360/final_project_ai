@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.database.database import getDb
+from app.auth_dependencies import requireRoles
 from app.schemas.dashboard import (
     DashboardCaseItem,
     DashboardSummaryResponse,
@@ -24,6 +25,7 @@ from app.services.dashboard_service import (
 router = APIRouter(
     prefix="/api/dashboard",
     tags=["Dashboard"],
+    dependencies=[Depends(requireRoles("ADMIN", "SUPERVISOR", "OFFICER", "VIEWER"))],
 )
 
 DashboardSkip = Annotated[int, Query(ge=0)]

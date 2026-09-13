@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight, Eye } from 'lucide-react'
-import { formatUserDate, getInitials, roleLabels } from '../../data/mockUsers'
+import { formatUserDate, getInitials, roleLabels } from '../../utils/user'
 
 const roleClasses = { ADMIN: 'bg-violet-50 text-violet-700', SUPERVISOR: 'bg-blue-50 text-blue-700', OFFICER: 'bg-cyan-50 text-cyan-700', VIEWER: 'bg-slate-100 text-slate-600' }
 

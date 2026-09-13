@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database.database import getDb
+from app.auth_dependencies import requireRoles
 from app.schemas.department import DepartmentResponse
 from app.schemas.field import FieldResponse
 from app.schemas.procedure import ProcedureResponse
@@ -17,6 +18,7 @@ from app.services.catalog_service import (
 router = APIRouter(
     prefix="/api/catalog",
     tags=["Catalog"],
+    dependencies=[Depends(requireRoles("ADMIN", "SUPERVISOR", "OFFICER", "VIEWER"))],
 )
 
 

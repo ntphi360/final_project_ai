@@ -59,3 +59,4 @@ class Officer(Base):
         back_populates="assignee",
         foreign_keys="Assignment.assignee_id",
     )
+    user: Mapped["User | None"] = relationship(back_populates="officer")

@@ -34,6 +34,16 @@ from app.services.officer_service import (
     getOfficersByField,
     removeOfficerFromField,
 )
+from app.services.user_service import (
+    authenticateUser,
+    createUser,
+    getUserByEmail,
+    getUserById,
+    getUsers,
+    resetUserPassword,
+    setUserStatus,
+    updateUser,
+)
 
 __all__ = [
     "getCases",
@@ -62,4 +72,12 @@ __all__ = [
     "getRecentCases",
     "getOverdueCases",
     "getNearDeadlineCases",
+    "authenticateUser",
+    "getUsers",
+    "getUserById",
+    "getUserByEmail",
+    "createUser",
+    "updateUser",
+    "setUserStatus",
+    "resetUserPassword",
 ]

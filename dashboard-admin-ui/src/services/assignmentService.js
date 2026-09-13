@@ -1,4 +1,3 @@
-import { currentAssigneeId, currentAssignerId } from '../config/currentIdentity'
 import api from './api'
 
 function mapAssignment(item) {
@@ -37,9 +36,7 @@ export async function createAssignments(data) {
     sendEmail: data.sendEmail,
     sendSms: data.sendSms,
   }
-  const response = await api.post('/api/assignments', payload, {
-    params: { assignerId: currentAssignerId },
-  })
+  const response = await api.post('/api/assignments', payload)
   return {
     ...response.data,
     assignments: response.data.assignments.map(mapAssignment),
@@ -54,7 +51,6 @@ export async function getMyAssignments(params = {}) {
     toDate: params.toDate,
     page: params.page,
     pageSize: params.pageSize,
-    assigneeId: currentAssigneeId,
   })
   const response = await api.get('/api/assignments/my', {
     params: supportedParams,
@@ -84,9 +80,7 @@ export async function getAssignmentById(id) {
 }
 
 export async function acceptAssignment(id) {
-  const { data } = await api.post(`/api/assignments/${id}/accept`, null, {
-    params: { assigneeId: currentAssigneeId },
-  })
+  const { data } = await api.post(`/api/assignments/${id}/accept`)
   return mapAssignment(data)
 }
 
@@ -94,7 +88,6 @@ export async function rejectAssignment(id, reason) {
   const { data } = await api.post(
     `/api/assignments/${id}/reject`,
     { reason },
-    { params: { assigneeId: currentAssigneeId } },
   )
   return mapAssignment(data)
 }
@@ -109,5 +102,5 @@ export async function getAssignmentSummary(params = {}) {
 }
 
 export function getMyAssignmentSummary() {
-  return getAssignmentSummary({ assigneeId: currentAssigneeId })
+  return getAssignmentSummary()
 }

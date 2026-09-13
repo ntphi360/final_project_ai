@@ -36,6 +36,7 @@ def main() -> None:
     runAlembicUpgrade()
     runModule("app.seeds.catalog_seed")
     runModule("app.seeds.officer_seed")
+    runModule("app.seeds.admin_seed")
     runModule("app.scripts.backfill_case_relations")
 
     print("Setup database hoàn tất.")

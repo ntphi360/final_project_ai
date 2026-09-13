@@ -15,25 +15,20 @@ import {
 import { useDispatch, useSelector } from 'react-redux'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { closeMobileSidebar, toggleSidebar } from '../../features/ui/uiSlice'
+import { getInitials, roleLabels } from '../../utils/user'
 
 const menu = [
-  { label: 'Tổng quan', icon: House, path: '/dashboard' },
-  { label: 'Hồ sơ đang xử lý', icon: FileText, path: '/cases/processing' },
-  { label: 'Giao việc', icon: Send, path: '/assignments' },
-  { label: 'Việc được giao', icon: Inbox, path: '/assigned-work' },
-  { label: 'Theo dõi giao việc', icon: ClipboardList, path: '/assignment-tracking' },
-  { label: 'Import dữ liệu', icon: Import, path: '/data-import' },
-  { label: 'Báo cáo thống kê', icon: BarChart3, path: '/reports' },
-  { label: 'Người dùng', icon: Users, path: '/users' },
+  { label: 'Tổng quan', icon: House, path: '/dashboard', roles: ['ADMIN', 'SUPERVISOR', 'OFFICER', 'VIEWER'] },
+  { label: 'Hồ sơ đang xử lý', icon: FileText, path: '/cases/processing', roles: ['ADMIN', 'SUPERVISOR', 'OFFICER'] },
+  { label: 'Giao việc', icon: Send, path: '/assignments', roles: ['ADMIN', 'SUPERVISOR'] },
+  { label: 'Việc được giao', icon: Inbox, path: '/assigned-work', roles: ['OFFICER'] },
+  { label: 'Theo dõi giao việc', icon: ClipboardList, path: '/assignment-tracking', roles: ['ADMIN', 'SUPERVISOR'] },
+  { label: 'Import dữ liệu', icon: Import, path: '/data-import', roles: ['ADMIN', 'SUPERVISOR'] },
+  { label: 'Báo cáo thống kê', icon: BarChart3, path: '/reports', roles: ['ADMIN', 'SUPERVISOR', 'OFFICER', 'VIEWER'] },
+  { label: 'Người dùng', icon: Users, path: '/users', roles: ['ADMIN'] },
 ]
 
-const defaultUser = {
-  initials: 'NV',
-  name: 'Nguyễn Văn A',
-  role: 'Quản trị viên',
-}
-
-export default function Sidebar({ user = defaultUser }) {
+export default function Sidebar() {
   const dispatch = useDispatch()
   const location = useLocation()
   const navigate = useNavigate()
@@ -41,6 +36,8 @@ export default function Sidebar({ user = defaultUser }) {
   const { mobileSidebarOpen, sidebarCollapsed } = useSelector(
     (state) => state.ui,
   )
+  const user = useSelector((state) => state.auth.user)
+  const visibleMenu = menu.filter((item) => item.roles.includes(user?.role))
 
   const handleNavigate = (path) => {
     navigate(path)
@@ -93,7 +90,7 @@ export default function Sidebar({ user = defaultUser }) {
           className="sidebar-nav"
           aria-label="Điều hướng chính"
         >
-          {menu.map(({ label, icon: Icon, path }) => {
+          {visibleMenu.map(({ label, icon: Icon, path }) => {
             const active = location.pathname === path
 
             return (
@@ -116,12 +113,12 @@ export default function Sidebar({ user = defaultUser }) {
             className="sidebar-profile"
           >
             <span className="profile-avatar">
-              {user.initials}
+              {getInitials(user?.fullName)}
             </span>
 
             <span className="profile-copy">
-              <strong>{user.name}</strong>
-              <small>{user.role}</small>
+              <strong>{user?.fullName}</strong>
+              <small>{roleLabels[user?.role] || user?.role}</small>
             </span>
 
             <ChevronDown size={17} />
