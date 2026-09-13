@@ -1,14 +1,22 @@
-import { Bell, ChevronDown, Menu, Search } from 'lucide-react'
+import { Bell, ChevronDown, LogOut, Menu, Search } from 'lucide-react'
 import { useDispatch } from 'react-redux'
 import { setSearchTerm } from '../../features/dashboard/dashboardSlice'
 import { toggleMobileSidebar } from '../../features/ui/uiSlice'
 import Breadcrumb from './Breadcrumb'
 
-export default function Header() {
+export default function Header({ showBreadcrumb = true, onSearch }) {
   const dispatch = useDispatch()
 
+  const handleSearch = (value) => {
+    if (onSearch) {
+      onSearch(value)
+      return
+    }
+    dispatch(setSearchTerm(value))
+  }
+
   return (
-    <header className="top-header">
+    <header className={`top-header ${showBreadcrumb ? '' : 'without-breadcrumb'}`}>
       <button
         type="button"
         className="icon-button menu-button"
@@ -18,14 +26,14 @@ export default function Header() {
         <Menu size={23} />
       </button>
 
-      <Breadcrumb />
+      {showBreadcrumb && <Breadcrumb />}
 
       <label className="global-search">
         <Search size={17} />
         <input
           type="search"
           placeholder="Tìm kiếm mã hồ sơ, tên thủ tục, cán bộ, phòng ban..."
-          onChange={(event) => dispatch(setSearchTerm(event.target.value))}
+          onChange={(event) => handleSearch(event.target.value)}
         />
         <kbd>Ctrl K</kbd>
       </label>
@@ -41,6 +49,10 @@ export default function Header() {
           <span>Quản trị viên</span>
         </div>
         <ChevronDown size={17} className="header-chevron" />
+        <button type="button" className="logout-button">
+          <LogOut size={18} />
+          <span>Đăng xuất</span>
+        </button>
       </div>
     </header>
   )

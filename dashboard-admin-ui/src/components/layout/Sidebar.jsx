@@ -1,29 +1,24 @@
 import {
-  AlertTriangle,
   BarChart3,
   Building2,
   CheckCircle2,
   ChevronDown,
-  FileInput,
   FileText,
+  House,
   ListTree,
   PanelLeftClose,
   Settings,
-  ShieldCheck,
   Users,
   X,
 } from 'lucide-react'
 import { useDispatch, useSelector } from 'react-redux'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { closeMobileSidebar, toggleSidebar } from '../../features/ui/uiSlice'
 
 const menu = [
-  { label: 'Tổng quan', icon: FileText, active: true },
-  { label: 'Hồ sơ đang xử lý', icon: ShieldCheck, count: '856' },
-  { label: 'Hồ sơ đã hoàn thành', icon: CheckCircle2 },
-  { label: 'Cảnh báo AI & Xác nhận', icon: AlertTriangle, count: '68', danger: true },
-  { label: 'Cảnh báo thủ công', icon: AlertTriangle },
-  { label: 'Import dữ liệu', icon: FileInput },
-  { label: 'Quản lý model', icon: Building2 },
+  { label: 'Tổng quan', icon: House, path: '/overview' },
+  { label: 'Hồ sơ đang xử lý', icon: FileText, path: '/dashboard' },
+  { label: 'Hồ sơ đã xử lý', icon: CheckCircle2 },
   { label: 'Báo cáo thống kê', icon: BarChart3 },
   { label: 'Danh mục', icon: ListTree },
   { label: 'Người dùng', icon: Users },
@@ -32,6 +27,8 @@ const menu = [
 
 export default function Sidebar() {
   const dispatch = useDispatch()
+  const location = useLocation()
+  const navigate = useNavigate()
   const { mobileSidebarOpen, sidebarCollapsed } = useSelector((state) => state.ui)
 
   return (
@@ -52,8 +49,8 @@ export default function Sidebar() {
         <div className="brand">
           <Building2 className="brand-icon" size={39} strokeWidth={1.8} />
           <div className="brand-copy">
-            <strong>HỆ THỐNG AI</strong>
-            <span>Cảnh báo hồ sơ trễ hạn</span>
+            <strong>HỆ THỐNG QUẢN LÝ<br />HỒ SƠ CÔNG</strong>
+            <span>Vì hành chính phục vụ</span>
           </div>
           <button
             type="button"
@@ -66,13 +63,23 @@ export default function Sidebar() {
         </div>
 
         <nav className="sidebar-nav" aria-label="Điều hướng chính">
-          {menu.map(({ label, icon: Icon, active, count, danger }) => (
-            <button type="button" className={`nav-item ${active ? 'active' : ''}`} key={label}>
-              <Icon size={20} />
-              <span className="nav-label">{label}</span>
-              {count && <b className={`nav-count ${danger ? 'danger' : ''}`}>{count}</b>}
-            </button>
-          ))}
+          {menu.map(({ label, icon: Icon, path }) => {
+            const isProcessing = label === 'Hồ sơ đang xử lý'
+            const active = isProcessing
+              ? ['/dashboard', '/cases/processing'].includes(location.pathname)
+              : path === location.pathname
+            return (
+              <button
+                type="button"
+                className={`nav-item ${active ? 'active' : ''}`}
+                onClick={() => path && navigate(path)}
+                key={label}
+              >
+                <Icon size={20} />
+                <span className="nav-label">{label}</span>
+              </button>
+            )
+          })}
         </nav>
 
         <div className="sidebar-footer">
