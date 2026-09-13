@@ -51,7 +51,7 @@ def createAssignmentBatch(
 ):
     assigner_id = _requireOfficerId(currentUser)
     try:
-        assignments, skipped = createAssignments(
+        assignments, skipped, notifications = createAssignments(
             db=db,
             data=data,
             assignerId=assigner_id,
@@ -75,6 +75,7 @@ def createAssignmentBatch(
         skipped_count=len(skipped),
         assignments=assignments,
         skipped=skipped,
+        notifications=notifications,
     )
 
 

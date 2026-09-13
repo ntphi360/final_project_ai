@@ -32,6 +32,7 @@ app.add_middleware(
 )
 
 
+
 app.include_router(authRouter)
 app.include_router(userRouter)
 app.include_router(caseRouter)

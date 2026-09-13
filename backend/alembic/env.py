@@ -13,6 +13,7 @@ from app.models import (
     DepartmentField,
     Field,
     ImportHistory,
+    NotificationLog,
     Officer,
     OfficerField,
     Procedure,

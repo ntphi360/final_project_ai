@@ -7,14 +7,17 @@ from sqlalchemy.orm import Session, joinedload
 from app.models.assignment import Assignment, AssignmentStatus
 from app.models.case import Case
 from app.models.officer import Officer
+from app.models.user import User
 from app.schemas.assignment import (
     AssignmentCreate,
     AssignmentDetail,
     AssignmentFilters,
     AssignmentRead,
     AssignmentSkipped,
+    AssignmentNotificationResult,
     AssignmentSummaryResponse,
 )
+from app.services.notification_service import saveNotificationLogs, sendAssignmentNotification
 
 
 class AssignmentNotFoundError(Exception):
@@ -43,7 +46,7 @@ def createAssignments(
     db: Session,
     data: AssignmentCreate,
     assignerId: int,
-) -> tuple[list[AssignmentRead], list[AssignmentSkipped]]:
+) -> tuple[list[AssignmentRead], list[AssignmentSkipped], list[AssignmentNotificationResult]]:
     _requireActiveOfficer(db=db, officerId=assignerId)
     _requireActiveOfficer(db=db, officerId=data.assignee_id)
 
@@ -103,12 +106,32 @@ def createAssignments(
         raise
 
     if not createdIds:
-        return [], skipped
+        return [], skipped, []
 
     statement = _assignmentSelect().where(Assignment.id.in_(createdIds))
     savedAssignments = list(db.scalars(statement).unique().all())
     savedById = {assignment.id: assignment for assignment in savedAssignments}
-    return [toAssignmentRead(savedById[id]) for id in createdIds], skipped
+    notificationResults: list[AssignmentNotificationResult] = []
+    for assignmentId in createdIds:
+        assignment = savedById[assignmentId]
+        try:
+            recipient = db.scalar(select(User).where(User.officer_id == assignment.assignee_id))
+            result = sendAssignmentNotification(assignment, recipient)
+            saveNotificationLogs(db, assignment, recipient, result)
+        except Exception:
+            db.rollback()
+            result = {
+                "assignment_id": assignmentId,
+                "email": _notificationFailure("RESEND") if assignment.send_email else None,
+                "sms": _notificationFailure("TEXTBEE") if assignment.send_sms else None,
+            }
+        notificationResults.append(AssignmentNotificationResult.model_validate(result))
+
+    return (
+        [toAssignmentRead(savedById[id]) for id in createdIds],
+        skipped,
+        notificationResults,
+    )
 
 
 def getAssignments(
@@ -368,3 +391,12 @@ def _commitAssignment(db: Session, assignment: Assignment) -> None:
     except SQLAlchemyError:
         db.rollback()
         raise
+
+
+def _notificationFailure(provider: str) -> dict:
+    return {
+        "success": False,
+        "provider": provider,
+        "message_id": None,
+        "error": "Không thể xử lý gửi thông báo.",
+    }

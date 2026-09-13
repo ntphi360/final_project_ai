@@ -121,11 +121,25 @@ class AssignmentSkipped(CamelModel):
     reason: str
 
 
+class NotificationDeliveryResult(CamelModel):
+    success: bool
+    provider: str
+    message_id: str | None = None
+    error: str | None = None
+
+
+class AssignmentNotificationResult(CamelModel):
+    assignment_id: int
+    email: NotificationDeliveryResult | None = None
+    sms: NotificationDeliveryResult | None = None
+
+
 class AssignmentCreateResponse(CamelModel):
     created_count: int
     skipped_count: int
     assignments: list[AssignmentRead]
     skipped: list[AssignmentSkipped]
+    notifications: list[AssignmentNotificationResult] = Field(default_factory=list)
 
 
 class AssignmentListResponse(CamelModel):

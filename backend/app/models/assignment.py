@@ -127,3 +127,7 @@ class Assignment(Base):
         back_populates="received_tasks",
         foreign_keys=[assignee_id],
     )
+    notification_logs: Mapped[list["NotificationLog"]] = relationship(
+        back_populates="assignment",
+        cascade="all, delete-orphan",
+    )

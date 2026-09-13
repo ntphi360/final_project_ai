@@ -44,6 +44,9 @@ from app.services.user_service import (
     setUserStatus,
     updateUser,
 )
+from app.services.email_service import sendEmail
+from app.services.notification_service import sendAssignmentNotification
+from app.services.sms_service import normalizeVietnamPhone, sendSms
 
 __all__ = [
     "getCases",
@@ -80,4 +83,8 @@ __all__ = [
     "updateUser",
     "setUserStatus",
     "resetUserPassword",
+    "sendEmail",
+    "sendSms",
+    "normalizeVietnamPhone",
+    "sendAssignmentNotification",
 ]

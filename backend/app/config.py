@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     admin_email: str | None = None
     admin_password: str | None = None
     admin_phone: str | None = None
+    resend_api_key: str | None = None
+    resend_from_email: str | None = None
+    textbee_api_key: str | None = None
+    textbee_base_url: str = "https://api.textbee.dev/api/v1"
+    textbee_device_id: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=".env",

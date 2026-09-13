@@ -21,6 +21,19 @@ function normalize(value) {
   return value.trim().toLocaleLowerCase('vi')
 }
 
+function notificationSummary(notifications = []) {
+  return [['email', 'Email'], ['sms', 'SMS']]
+    .map(([channel, label]) => {
+      const deliveries = notifications.map((item) => item[channel]).filter(Boolean)
+      if (!deliveries.length) return ''
+      const sent = deliveries.filter((item) => item.success).length
+      const failed = deliveries.length - sent
+      return `${label}: ${sent} đã gửi${failed ? `, ${failed} thất bại` : ''}.`
+    })
+    .filter(Boolean)
+    .join(' ')
+}
+
 export default function Assignment() {
   const location = useLocation()
   const dispatch = useDispatch()
@@ -189,7 +202,8 @@ export default function Assignment() {
         sendSms: form.sms,
       })).unwrap()
       setModalOpen(false)
-      setToast(`Đã giao thành công ${result.createdCount} hồ sơ.${result.skippedCount ? ` ${result.skippedCount} hồ sơ bị bỏ qua do đã có giao việc đang chờ.` : ''}`)
+      const deliveryMessage = notificationSummary(result.notifications)
+      setToast(`Đã giao thành công ${result.createdCount} hồ sơ.${result.skippedCount ? ` ${result.skippedCount} hồ sơ bị bỏ qua do đã có giao việc đang chờ.` : ''}${deliveryMessage ? ` ${deliveryMessage}` : ''}`)
       resetAssignment()
       await loadData()
     } catch (error) {
