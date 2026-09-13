@@ -11,7 +11,9 @@ import CaseTable from '../components/cases/CaseTable'
 import RiskSummaryCards from '../components/cases/RiskSummaryCards'
 import Header from '../components/layout/Header'
 import Sidebar from '../components/layout/Sidebar'
-import { getProcessingCases } from '../services/caseService'
+import { getCaseById, getProcessingCases } from '../services/caseService'
+import { getDepartments, getFields } from '../services/catalogService'
+import { getOfficers } from '../services/officerService'
 import { getApiErrorMessage } from '../services/serviceUtils'
 import '../styles/processing-cases.css'
 
@@ -33,6 +35,7 @@ export default function ProcessingCases() {
   const location = useLocation()
   const { sidebarCollapsed } = useSelector((state) => state.ui)
   const [cases, setCases] = useState([])
+  const [catalogOptions, setCatalogOptions] = useState({ field: [], department: [], officer: [] })
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [activeTab, setActiveTab] = useState('all')
@@ -41,6 +44,9 @@ export default function ProcessingCases() {
   const [globalSearch, setGlobalSearch] = useState('')
   const [selectedIds, setSelectedIds] = useState([])
   const [detailCaseId, setDetailCaseId] = useState(null)
+  const [detailData, setDetailData] = useState(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detailError, setDetailError] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [bulkAction, setBulkAction] = useState(null)
@@ -52,7 +58,18 @@ export default function ProcessingCases() {
     setLoading(true)
     setLoadError('')
     try {
-      setCases(await getProcessingCases())
+      const [caseItems, fields, departments, officers] = await Promise.all([
+        getProcessingCases(),
+        getFields(),
+        getDepartments(),
+        getOfficers(),
+      ])
+      setCases(caseItems)
+      setCatalogOptions({
+        field: fields.map((item) => item.name),
+        department: departments.map((item) => item.name),
+        officer: officers.filter((item) => item.active).map((item) => item.name),
+      })
     } catch (error) {
       setLoadError(getApiErrorMessage(error, 'Không thể tải danh sách hồ sơ. Vui lòng thử lại.'))
     } finally {
@@ -65,6 +82,30 @@ export default function ProcessingCases() {
   }, [loadCases])
 
   useEffect(() => {
+    if (detailCaseId == null) {
+      setDetailData(null)
+      setDetailError('')
+      return undefined
+    }
+
+    let active = true
+    setDetailLoading(true)
+    setDetailError('')
+    getCaseById(detailCaseId)
+      .then((item) => {
+        if (active) setDetailData(item)
+      })
+      .catch((error) => {
+        if (active) setDetailError(getApiErrorMessage(error, 'Không thể tải chi tiết hồ sơ.'))
+      })
+      .finally(() => {
+        if (active) setDetailLoading(false)
+      })
+
+    return () => { active = false }
+  }, [detailCaseId])
+
+  useEffect(() => {
     const requestedCase = location.state?.caseId
     if (!requestedCase || cases.length === 0) return
     const match = cases.find((item) => item.caseCode === requestedCase || item.id === requestedCase)
@@ -72,11 +113,11 @@ export default function ProcessingCases() {
   }, [cases, location.state])
 
   const filterOptions = useMemo(() => ({
-    field: [...new Set(cases.map((item) => item.field))].sort(),
-    department: [...new Set(cases.map((item) => item.department))].sort(),
-    officer: [...new Set(cases.map((item) => item.officer))].sort(),
+    field: catalogOptions.field,
+    department: catalogOptions.department,
+    officer: catalogOptions.officer,
     status: ['Đang xử lý', 'Chờ xác nhận', 'Đã xác nhận'],
-  }), [cases])
+  }), [catalogOptions])
 
   const filteredCases = useMemo(() => cases.filter((item) => {
     const tabMatches = activeTab === 'all'
@@ -104,7 +145,7 @@ export default function ProcessingCases() {
 
   const totalPages = Math.max(1, Math.ceil(filteredCases.length / pageSize))
   const pageCases = filteredCases.slice((page - 1) * pageSize, page * pageSize)
-  const detailCase = cases.find((item) => item.id === detailCaseId) || null
+  const detailCase = detailData || cases.find((item) => item.id === detailCaseId) || null
   const selectedCases = cases.filter((item) => selectedIds.includes(item.id))
   const validSelectedCases = selectedCases.filter((item) => (
     bulkAction === 'follow'
@@ -128,6 +169,7 @@ export default function ProcessingCases() {
     setCases((currentCases) => currentCases.map((item) => (
       item.id === caseId ? { ...item, ...changes } : item
     )))
+    setDetailData((current) => current?.id === caseId ? { ...current, ...changes } : current)
   }
 
   const handleToggleCase = (caseId) => {
@@ -258,6 +300,8 @@ export default function ProcessingCases() {
               />
             </div>
 
+            {detailLoading && detailCaseId != null && <div className="fixed right-4 top-20 z-[70] flex items-center gap-2 rounded-lg border border-blue-100 bg-white px-4 py-3 text-sm font-medium text-blue-700 shadow-lg"><LoaderCircle size={17} className="animate-spin" /> Đang tải chi tiết...</div>}
+            {detailError && <div className="fixed right-4 top-20 z-[70] max-w-sm rounded-lg border border-red-200 bg-white px-4 py-3 text-sm text-red-700 shadow-lg">{detailError}</div>}
             <CaseDetailPanel
               item={detailCase}
               onClose={() => setDetailCaseId(null)}

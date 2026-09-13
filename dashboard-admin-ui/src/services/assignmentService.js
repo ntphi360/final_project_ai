@@ -14,40 +14,77 @@ function mapAssignment(item) {
 
 function mapList(data) {
   return {
-    ...data,
-    items: (data.items || []).map(mapAssignment),
+    items: data.items.map(mapAssignment),
+    page: data.page,
+    pageSize: data.pageSize,
+    total: data.total,
+    totalPages: data.totalPages,
   }
 }
 
+function compactParams(params) {
+  return Object.fromEntries(
+    Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== ''),
+  )
+}
+
 export async function createAssignments(data) {
-  const response = await api.post('/assignments', data, {
+  const payload = {
+    caseIds: data.caseIds,
+    assigneeId: data.assigneeId,
+    title: data.title,
+    content: data.content,
+    sendEmail: data.sendEmail,
+    sendSms: data.sendSms,
+  }
+  const response = await api.post('/api/assignments', payload, {
     params: { assignerId: currentAssignerId },
   })
   return {
     ...response.data,
-    assignments: (response.data.assignments || []).map(mapAssignment),
+    assignments: response.data.assignments.map(mapAssignment),
   }
 }
 
 export async function getMyAssignments(params = {}) {
-  const response = await api.get('/assignments/my', {
-    params: { ...params, assigneeId: currentAssigneeId },
+  const supportedParams = compactParams({
+    status: params.status,
+    search: params.search,
+    fromDate: params.fromDate,
+    toDate: params.toDate,
+    page: params.page,
+    pageSize: params.pageSize,
+    assigneeId: currentAssigneeId,
+  })
+  const response = await api.get('/api/assignments/my', {
+    params: supportedParams,
   })
   return mapList(response.data)
 }
 
 export async function getAssignments(params = {}) {
-  const response = await api.get('/assignments', { params })
+  const supportedParams = compactParams({
+    status: params.status,
+    assignerId: params.assignerId,
+    assigneeId: params.assigneeId,
+    departmentId: params.departmentId,
+    search: params.search,
+    fromDate: params.fromDate,
+    toDate: params.toDate,
+    page: params.page,
+    pageSize: params.pageSize,
+  })
+  const response = await api.get('/api/assignments', { params: supportedParams })
   return mapList(response.data)
 }
 
 export async function getAssignmentById(id) {
-  const { data } = await api.get(`/assignments/${id}`)
+  const { data } = await api.get(`/api/assignments/${id}`)
   return mapAssignment(data)
 }
 
 export async function acceptAssignment(id) {
-  const { data } = await api.post(`/assignments/${id}/accept`, null, {
+  const { data } = await api.post(`/api/assignments/${id}/accept`, null, {
     params: { assigneeId: currentAssigneeId },
   })
   return mapAssignment(data)
@@ -55,7 +92,7 @@ export async function acceptAssignment(id) {
 
 export async function rejectAssignment(id, reason) {
   const { data } = await api.post(
-    `/assignments/${id}/reject`,
+    `/api/assignments/${id}/reject`,
     { reason },
     { params: { assigneeId: currentAssigneeId } },
   )
@@ -63,7 +100,11 @@ export async function rejectAssignment(id, reason) {
 }
 
 export async function getAssignmentSummary(params = {}) {
-  const { data } = await api.get('/assignments/summary', { params })
+  const supportedParams = compactParams({
+    assignerId: params.assignerId,
+    assigneeId: params.assigneeId,
+  })
+  const { data } = await api.get('/api/assignments/summary', { params: supportedParams })
   return data
 }
 

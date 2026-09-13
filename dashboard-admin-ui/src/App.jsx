@@ -11,15 +11,19 @@ import Users from './pages/Users'
 export default function App() {
   return (
     <Routes>
-      <Route path="/dashboard" element={<ProcessingCases />} />
+      <Route path="/dashboard" element={<Dashboard />} />
+
       <Route path="/cases/processing" element={<ProcessingCases />} />
+
       <Route path="/assignments" element={<Assignment />} />
       <Route path="/assigned-work" element={<AssignedWork />} />
       <Route path="/assignment-tracking" element={<AssignmentTracking />} />
+
       <Route path="/data-import" element={<DataImport />} />
       <Route path="/reports" element={<Reports />} />
       <Route path="/users" element={<Users />} />
-      <Route path="/overview" element={<Dashboard />} />
+
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   )

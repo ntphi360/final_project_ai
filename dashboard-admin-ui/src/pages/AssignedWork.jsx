@@ -19,7 +19,6 @@ import {
   fetchMyAssignments,
   fetchMyAssignmentSummary,
 } from '../features/assignments/assignmentsSlice'
-import { getOfficers } from '../services/officerService'
 
 const emptyFilters = { query: '', assignerId: 'all', status: 'all', fromDate: '', toDate: '' }
 const fallbackUser = { initials: 'CB', name: 'Cán bộ nhận việc', role: 'Cán bộ xử lý' }
@@ -36,7 +35,6 @@ export default function AssignedWork() {
   const [draftFilters, setDraftFilters] = useState(emptyFilters)
   const [appliedFilters, setAppliedFilters] = useState(emptyFilters)
   const [globalSearch, setGlobalSearch] = useState('')
-  const [officers, setOfficers] = useState([])
   const [acceptModalOpen, setAcceptModalOpen] = useState(false)
   const [rejectModalOpen, setRejectModalOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
@@ -48,7 +46,6 @@ export default function AssignedWork() {
   const queryParams = useMemo(() => ({
     status: activeTab !== 'ALL' ? activeTab : appliedFilters.status !== 'all' ? appliedFilters.status : undefined,
     search: globalSearch.trim() || appliedFilters.query.trim() || undefined,
-    assignerId: appliedFilters.assignerId !== 'all' ? appliedFilters.assignerId : undefined,
     fromDate: appliedFilters.fromDate || undefined,
     toDate: appliedFilters.toDate || undefined,
     page,
@@ -56,10 +53,21 @@ export default function AssignedWork() {
   }), [activeTab, appliedFilters, globalSearch, page, pageSize])
 
   const receiverUser = useMemo(() => {
-    const officer = officers.find((item) => item.id === currentAssigneeId)
-    if (!officer) return fallbackUser
-    return { initials: getInitials(officer.name), name: officer.name, role: 'Cán bộ xử lý' }
-  }, [officers])
+    const assignment = myList.items.find((item) => item.assigneeId === currentAssigneeId)
+    if (!assignment) return fallbackUser
+    return { initials: getInitials(assignment.assigneeName), name: assignment.assigneeName, role: 'Cán bộ xử lý' }
+  }, [myList.items])
+
+  const assignerOptions = useMemo(() => {
+    const uniqueAssigners = new Map()
+    myList.items.forEach((item) => uniqueAssigners.set(item.assignerId, { id: item.assignerId, name: item.assignerName }))
+    return [...uniqueAssigners.values()]
+  }, [myList.items])
+
+  const displayedAssignments = useMemo(() => {
+    if (appliedFilters.assignerId === 'all') return myList.items
+    return myList.items.filter((item) => String(item.assignerId) === String(appliedFilters.assignerId))
+  }, [appliedFilters.assignerId, myList.items])
 
   useEffect(() => {
     dispatch(fetchMyAssignments(queryParams))
@@ -67,7 +75,6 @@ export default function AssignedWork() {
 
   useEffect(() => {
     dispatch(fetchMyAssignmentSummary())
-    getOfficers().then(setOfficers).catch(() => setOfficers([]))
   }, [dispatch])
 
   useEffect(() => {
@@ -148,13 +155,13 @@ export default function AssignedWork() {
               <AssignedWorkTabs summary={mySummary} activeTab={activeTab} onChange={(tab) => { setPage(1); setActiveTab(tab) }} />
               <AssignedWorkFilter
                 filters={draftFilters}
-                assigners={officers}
+                assigners={assignerOptions}
                 onChange={(key, value) => setDraftFilters((current) => ({ ...current, [key]: value }))}
                 onApply={() => { setPage(1); setAppliedFilters({ ...draftFilters }) }}
               />
               <AssignedWorkTable
-                assignments={myList.items}
-                totalCount={myList.total}
+                assignments={displayedAssignments}
+                totalCount={appliedFilters.assignerId === 'all' ? myList.total : displayedAssignments.length}
                 page={page}
                 pageSize={pageSize}
                 onView={openDetail}

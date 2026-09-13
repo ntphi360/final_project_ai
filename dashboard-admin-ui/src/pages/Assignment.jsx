@@ -10,7 +10,8 @@ import Header from '../components/layout/Header'
 import Sidebar from '../components/layout/Sidebar'
 import { createAssignmentBatch } from '../features/assignments/assignmentsSlice'
 import { getAllProcessingCases } from '../services/caseService'
-import { getOfficers } from '../services/officerService'
+import { getDepartments, getFields } from '../services/catalogService'
+import { getOfficers, getOfficersByField } from '../services/officerService'
 import { getApiErrorMessage } from '../services/serviceUtils'
 
 const emptyFilters = { query: '', field: 'all', department: 'all', officer: 'all', status: 'all' }
@@ -27,6 +28,10 @@ export default function Assignment() {
   const submitting = useSelector((state) => state.assignments.loading.action)
   const [cases, setCases] = useState([])
   const [officers, setOfficers] = useState([])
+  const [eligibleOfficers, setEligibleOfficers] = useState([])
+  const [eligibleOfficersLoading, setEligibleOfficersLoading] = useState(false)
+  const [eligibleOfficersError, setEligibleOfficersError] = useState('')
+  const [catalogs, setCatalogs] = useState({ fields: [], departments: [] })
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [actionError, setActionError] = useState('')
@@ -44,12 +49,16 @@ export default function Assignment() {
     setLoading(true)
     setLoadError('')
     try {
-      const [caseItems, officerItems] = await Promise.all([
+      const [caseItems, officerItems, fields, departments] = await Promise.all([
         getAllProcessingCases(),
         getOfficers(),
+        getFields(),
+        getDepartments(),
       ])
       setCases(caseItems)
       setOfficers(officerItems)
+      setEligibleOfficers(officerItems)
+      setCatalogs({ fields, departments })
     } catch (error) {
       setLoadError(getApiErrorMessage(error, 'Không thể tải hồ sơ hoặc danh sách cán bộ. Vui lòng thử lại.'))
     } finally {
@@ -69,11 +78,11 @@ export default function Assignment() {
   }, [cases, location.state])
 
   const options = useMemo(() => ({
-    field: [...new Set(cases.map((item) => item.field))].sort(),
-    department: [...new Set(cases.map((item) => item.department))].sort(),
-    officer: [...new Set(cases.map((item) => item.officer))].sort(),
+    field: catalogs.fields.map((item) => item.name),
+    department: catalogs.departments.map((item) => item.name),
+    officer: officers.filter((item) => item.active).map((item) => item.name),
     status: [...new Set(cases.map((item) => item.status))],
-  }), [cases])
+  }), [cases, catalogs, officers])
 
   const filteredCases = useMemo(() => cases.filter((item) => {
     const query = normalize(appliedFilters.query)
@@ -89,8 +98,53 @@ export default function Assignment() {
 
   const totalPages = Math.max(1, Math.ceil(filteredCases.length / pageSize))
   const pageCases = filteredCases.slice((page - 1) * pageSize, page * pageSize)
-  const selectedOfficer = officers.find((item) => String(item.id) === String(form.officerId)) || null
+  const selectedFieldIds = useMemo(() => {
+    const fieldNames = new Set(cases.filter((item) => selectedIds.includes(item.id)).map((item) => item.field))
+    return catalogs.fields.filter((item) => fieldNames.has(item.name)).map((item) => item.id)
+  }, [cases, catalogs.fields, selectedIds])
+  const selectedOfficer = eligibleOfficers.find((item) => String(item.id) === String(form.officerId)) || null
   const canSubmit = selectedIds.length > 0 && Boolean(selectedOfficer) && Boolean(form.title.trim()) && Boolean(form.content.trim())
+
+  useEffect(() => {
+    let active = true
+
+    if (selectedFieldIds.length === 0) {
+      setEligibleOfficers(officers)
+      setEligibleOfficersError('')
+      return undefined
+    }
+
+    setEligibleOfficersLoading(true)
+    setEligibleOfficersError('')
+    Promise.all(selectedFieldIds.map((fieldId) => getOfficersByField(fieldId)))
+      .then((officerGroups) => {
+        if (!active) return
+        const commonOfficerIds = officerGroups.reduce((commonIds, group, index) => {
+          const currentIds = new Set(group.filter((item) => item.active).map((item) => item.id))
+          return index === 0
+            ? currentIds
+            : new Set([...commonIds].filter((id) => currentIds.has(id)))
+        }, new Set())
+        setEligibleOfficers(officers.filter((item) => item.active && commonOfficerIds.has(item.id)))
+      })
+      .catch((error) => {
+        if (active) {
+          setEligibleOfficers([])
+          setEligibleOfficersError(getApiErrorMessage(error, 'Không thể tải cán bộ phù hợp theo lĩnh vực.'))
+        }
+      })
+      .finally(() => {
+        if (active) setEligibleOfficersLoading(false)
+      })
+
+    return () => { active = false }
+  }, [officers, selectedFieldIds])
+
+  useEffect(() => {
+    if (form.officerId && !eligibleOfficers.some((item) => String(item.id) === String(form.officerId))) {
+      setForm((current) => ({ ...current, officerId: '' }))
+    }
+  }, [eligibleOfficers, form.officerId])
 
   useEffect(() => {
     if (page > totalPages) setPage(totalPages)
@@ -140,6 +194,7 @@ export default function Assignment() {
       setModalOpen(false)
       setToast(`Đã giao thành công ${result.createdCount} hồ sơ.${result.skippedCount ? ` ${result.skippedCount} hồ sơ bị bỏ qua do đã có giao việc đang chờ.` : ''}`)
       resetAssignment()
+      await loadData()
     } catch (error) {
       setModalOpen(false)
       setActionError(typeof error === 'string' ? error : 'Không thể tạo giao việc. Vui lòng thử lại.')
@@ -159,6 +214,8 @@ export default function Assignment() {
 
           {loading && <div className="mb-3 flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700"><LoaderCircle size={18} className="animate-spin" /> Đang tải dữ liệu...</div>}
           {loadError && <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"><span className="flex items-center gap-2"><AlertCircle size={18} />{loadError}</span><button type="button" className="font-semibold underline" onClick={loadData}>Thử lại</button></div>}
+          {eligibleOfficersLoading && <div className="mb-3 flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700"><LoaderCircle size={18} className="animate-spin" /> Đang tải cán bộ phù hợp theo lĩnh vực...</div>}
+          {eligibleOfficersError && <div className="mb-3 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"><AlertCircle size={18} />{eligibleOfficersError}</div>}
           {actionError && <div className="mb-3 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"><AlertCircle size={18} />{actionError}</div>}
 
           <div className="space-y-3">
@@ -181,7 +238,7 @@ export default function Assignment() {
             />
             <AssignmentForm
               form={form}
-              officers={officers}
+              officers={eligibleOfficers}
               selectedCount={selectedIds.length}
               canSubmit={canSubmit && !submitting}
               submitting={submitting}

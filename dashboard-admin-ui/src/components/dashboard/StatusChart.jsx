@@ -2,16 +2,16 @@ import { ChartNoAxesCombined } from 'lucide-react'
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import SectionHeading from './SectionHeading'
 
-export default function StatusChart({ data }) {
+export default function StatusChart({ data, total }) {
   return (
     <article className="dashboard-card status-card">
       <SectionHeading
         icon={ChartNoAxesCombined}
         iconColor="#0877ed"
         title="Tình trạng hồ sơ"
-        subtitle="Tổng 1.248 hồ sơ"
+        subtitle={`Tổng ${total.toLocaleString('vi-VN')} hồ sơ`}
       />
-      <div className="status-content">
+      {data.length === 0 ? <div className="flex h-56 items-center justify-center text-sm text-slate-500">Chưa có dữ liệu thống kê.</div> : <div className="status-content">
         <div className="donut-wrap">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -35,7 +35,7 @@ export default function StatusChart({ data }) {
             </PieChart>
           </ResponsiveContainer>
           <div className="donut-center">
-            <strong>1.248</strong>
+            <strong>{total.toLocaleString('vi-VN')}</strong>
             <span>hồ sơ</span>
           </div>
         </div>
@@ -52,7 +52,7 @@ export default function StatusChart({ data }) {
             </div>
           ))}
         </div>
-      </div>
+      </div>}
     </article>
   )
 }

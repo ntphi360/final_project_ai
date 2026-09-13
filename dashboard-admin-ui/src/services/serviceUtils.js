@@ -4,3 +4,7 @@ export function getApiErrorMessage(error, fallback) {
   if (typeof detail?.message === 'string') return detail.message
   return fallback
 }
+
+export function formatApiNumber(value) {
+  return new Intl.NumberFormat('vi-VN').format(value ?? 0)
+}

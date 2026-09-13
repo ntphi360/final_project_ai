@@ -1,16 +1,22 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
-import { dashboardMock } from '../../data/mockDashboard'
 import { getDashboardData } from '../../services/dashboardService'
+import { getApiErrorMessage } from '../../services/serviceUtils'
 
 export const fetchDashboard = createAsyncThunk(
   'dashboard/fetchDashboard',
-  async (filters = {}) => getDashboardData(filters),
+  async (_, { rejectWithValue }) => {
+    try {
+      return await getDashboardData()
+    } catch (error) {
+      return rejectWithValue(getApiErrorMessage(error, 'Không thể tải dữ liệu dashboard.'))
+    }
+  },
 )
 
 const dashboardSlice = createSlice({
   name: 'dashboard',
   initialState: {
-    data: dashboardMock,
+    data: { summary: null, statuses: [], fields: [], recentCases: [], overdue: [], nearDeadline: [] },
     loading: false,
     error: null,
     selectedRisk: 'Tất cả mức độ',
@@ -36,7 +42,7 @@ const dashboardSlice = createSlice({
       })
       .addCase(fetchDashboard.rejected, (state, action) => {
         state.loading = false
-        state.error = action.error.message || 'Không thể tải dữ liệu'
+        state.error = action.payload || 'Không thể tải dữ liệu dashboard.'
       })
   },
 })

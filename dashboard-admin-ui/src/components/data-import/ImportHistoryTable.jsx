@@ -10,8 +10,8 @@ export default function ImportHistoryTable({ items, page, pageSize, onPageChange
   return (
     <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
       <header className="border-b border-slate-200 px-4 py-3">
-        <h2 className="text-base font-bold text-slate-900">Lịch sử import</h2>
-        <p className="mt-1 text-xs text-slate-500">Các lần tải và xử lý dữ liệu gần đây.</p>
+        <h2 className="text-base font-bold text-slate-900">Lịch sử import (dữ liệu mẫu)</h2>
+        <p className="mt-1 text-xs text-slate-500">Backend chưa có API lịch sử import; các dòng có sẵn bên dưới là mock tạm thời.</p>
       </header>
       <div className="overflow-x-auto">
         <table className="min-w-[720px] table-fixed border-collapse text-sm text-slate-700">

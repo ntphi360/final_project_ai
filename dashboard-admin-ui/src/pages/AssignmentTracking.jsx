@@ -1,5 +1,5 @@
 import { AlertCircle, LoaderCircle } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import AssignmentTrackingDetailPanel from '../components/assignment-tracking/AssignmentTrackingDetailPanel'
@@ -15,8 +15,8 @@ import {
   fetchTrackingAssignments,
   fetchTrackingAssignmentSummary,
 } from '../features/assignments/assignmentsSlice'
-import { getDepartments } from '../services/catalogService'
 import { getOfficers } from '../services/officerService'
+import { getApiErrorMessage } from '../services/serviceUtils'
 
 const emptyFilters = {
   query: '',
@@ -37,7 +37,9 @@ export default function AssignmentTracking() {
   const [draftFilters, setDraftFilters] = useState(emptyFilters)
   const [appliedFilters, setAppliedFilters] = useState(emptyFilters)
   const [globalSearch, setGlobalSearch] = useState('')
-  const [options, setOptions] = useState({ officers: [], departments: [] })
+  const [officers, setOfficers] = useState([])
+  const [optionsLoading, setOptionsLoading] = useState(true)
+  const [optionsError, setOptionsError] = useState('')
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
@@ -58,16 +60,36 @@ export default function AssignmentTracking() {
     .filter((item) => item.status !== 'PENDING')
     .sort((a, b) => new Date(b.acceptedAt || b.rejectedAt) - new Date(a.acceptedAt || a.rejectedAt)), [trackingList.items])
 
+  const filterOptions = useMemo(() => {
+    const departments = new Map()
+    trackingList.items.forEach((item) => {
+      if (item.departmentId != null) {
+        departments.set(item.departmentId, { id: item.departmentId, name: item.departmentName })
+      }
+    })
+    return { officers, departments: [...departments.values()] }
+  }, [officers, trackingList.items])
+
   useEffect(() => {
     dispatch(fetchTrackingAssignments(queryParams))
   }, [dispatch, queryParams])
 
+  const loadOptions = useCallback(async () => {
+    setOptionsLoading(true)
+    setOptionsError('')
+    try {
+      setOfficers(await getOfficers())
+    } catch (error) {
+      setOptionsError(getApiErrorMessage(error, 'Không thể tải dữ liệu bộ lọc.'))
+    } finally {
+      setOptionsLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     dispatch(fetchTrackingAssignmentSummary())
-    Promise.all([getOfficers(), getDepartments()])
-      .then(([officers, departments]) => setOptions({ officers, departments }))
-      .catch(() => setOptions({ officers: [], departments: [] }))
-  }, [dispatch])
+    loadOptions()
+  }, [dispatch, loadOptions])
 
   useEffect(() => {
     dispatch(clearAssignmentDetail())
@@ -103,6 +125,8 @@ export default function AssignmentTracking() {
           </header>
 
           {loading.tracking && <div className="mb-3 flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700"><LoaderCircle size={18} className="animate-spin" /> Đang tải danh sách giao việc...</div>}
+          {optionsLoading && <div className="mb-3 flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700"><LoaderCircle size={18} className="animate-spin" /> Đang tải dữ liệu bộ lọc...</div>}
+          {optionsError && <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"><span className="flex items-center gap-2"><AlertCircle size={18} />{optionsError}</span><button type="button" className="font-semibold underline" onClick={loadOptions}>Thử lại</button></div>}
           {(errors.tracking || errors.trackingSummary) && <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"><span className="flex items-center gap-2"><AlertCircle size={18} />{errors.tracking || errors.trackingSummary}</span><button type="button" className="font-semibold underline" onClick={() => { dispatch(fetchTrackingAssignments(queryParams)); dispatch(fetchTrackingAssignmentSummary()) }}>Thử lại</button></div>}
           {errors.detail && <div className="mb-3 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"><AlertCircle size={18} />{errors.detail}</div>}
 
@@ -112,7 +136,7 @@ export default function AssignmentTracking() {
               <AssignmentTrackingTabs summary={trackingSummary} activeTab={activeTab} onChange={(tab) => { setPage(1); setActiveTab(tab) }} />
               <AssignmentTrackingFilter
                 filters={draftFilters}
-                options={options}
+                options={filterOptions}
                 onChange={(key, value) => setDraftFilters((current) => ({ ...current, [key]: value }))}
                 onApply={() => { setPage(1); setAppliedFilters({ ...draftFilters }) }}
                 onReset={resetFilters}

@@ -13,20 +13,12 @@ import RiskDistributionChart from '../components/reports/RiskDistributionChart'
 import StatusDistributionChart from '../components/reports/StatusDistributionChart'
 import Header from '../components/layout/Header'
 import Sidebar from '../components/layout/Sidebar'
-import { departmentData, officerData, reportFilterOptions, riskData, trendData } from '../data/mockReport'
 import { getReportDashboardData } from '../services/dashboardService'
 import { getApiErrorMessage } from '../services/serviceUtils'
 
 const emptyFilters = { from: '', to: '', field: 'all', department: 'all', officer: 'all' }
 const statusColors = ['#1677ff', '#f59e0b', '#22c55e', '#8b5cf6', '#ef4444', '#06b6d4']
 const statusDots = ['bg-blue-500', 'bg-amber-500', 'bg-green-500', 'bg-violet-500', 'bg-red-500', 'bg-cyan-500']
-
-function riskLabel(remainingSeconds, overdue) {
-  if (overdue || remainingSeconds <= 0) return 'Rất cao'
-  if (remainingSeconds <= 86400) return 'Cao'
-  if (remainingSeconds <= 3 * 86400) return 'Trung bình'
-  return 'Thấp'
-}
 
 function remainingLabel(seconds, overdue) {
   const absoluteSeconds = Math.abs(seconds)
@@ -44,7 +36,7 @@ function mapAttentionCase(item) {
     officer: item.officer_name || 'Chưa phân công',
     remaining: remainingLabel(seconds, item.is_overdue),
     remainingHours: Math.floor(seconds / 3600),
-    risk: riskLabel(seconds, item.is_overdue),
+    risk: item.is_overdue ? 'Quá hạn' : 'Gần đến hạn',
     status: item.status,
   }
 }
@@ -55,7 +47,7 @@ function mapReportData(data) {
     { id: 'total', label: 'Tổng hồ sơ', value: data.summary.total_cases, change: null, tone: 'blue' },
     { id: 'processing', label: 'Đang xử lý', value: data.summary.processing_cases, change: null, tone: 'amber' },
     { id: 'completed', label: 'Đã hoàn thành', value: data.summary.completed_cases, change: null, tone: 'emerald' },
-    { id: 'risk', label: 'Nguy cơ trễ hạn', value: data.summary.overdue_cases, change: null, tone: 'red' },
+    { id: 'risk', label: 'Hồ sơ quá hạn', value: data.summary.overdue_cases, change: null, tone: 'red' },
     { id: 'waiting', label: 'Chờ xác nhận', value: statusCount('Chờ xác nhận'), change: null, tone: 'violet' },
     { id: 'confirmed', label: 'Đã xác nhận', value: statusCount('Đã xác nhận'), change: null, tone: 'cyan' },
   ]
@@ -68,7 +60,15 @@ function mapReportData(data) {
   const fields = data.fields.map((item) => ({ name: item.field_name, value: item.count }))
   const attentionMap = new Map([...data.overdue, ...data.nearDeadline].map((item) => [item.id, item]))
   const attention = [...attentionMap.values()].map(mapAttentionCase)
-  return { summary, statuses, fields, attention }
+  const departments = [...new Set(data.recentCases.map((item) => item.department_name).filter(Boolean))]
+  const officers = [...new Set(data.recentCases.map((item) => item.officer_name).filter(Boolean))]
+  return {
+    summary,
+    statuses,
+    fields,
+    attention,
+    filterOptions: { fields: fields.map((item) => item.name), departments, officers },
+  }
 }
 
 export default function Reports() {
@@ -80,7 +80,13 @@ export default function Reports() {
   const [toast, setToast] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [reportData, setReportData] = useState({ summary: [], statuses: [], fields: [], attention: [] })
+  const [reportData, setReportData] = useState({
+    summary: [],
+    statuses: [],
+    fields: [],
+    attention: [],
+    filterOptions: { fields: [], departments: [], officers: [] },
+  })
 
   const loadReport = useCallback(async () => {
     setLoading(true)
@@ -129,7 +135,7 @@ export default function Reports() {
           <div className="space-y-3">
             <ReportFilterBar
               filters={filters}
-              options={reportFilterOptions}
+              options={reportData.filterOptions}
               quickFilter={quickFilter}
               onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
               onQuickFilter={(value) => { setQuickFilter(value); setToast(`Đã chọn khoảng thời gian: ${value}. Backend hiện chưa hỗ trợ lọc dashboard theo thời gian.`) }}
@@ -140,15 +146,15 @@ export default function Reports() {
             <ReportSummaryCards data={reportData.summary} />
 
             <section className="grid items-stretch gap-3 xl:grid-cols-[1.35fr_0.9fr_0.9fr]" aria-label="Biểu đồ báo cáo chính">
-              <CaseTrendChart data={trendData} />
+              <CaseTrendChart data={[]} />
               <StatusDistributionChart data={reportData.statuses} total={reportData.summary[0]?.value || 0} />
-              <RiskDistributionChart data={riskData} />
+              <RiskDistributionChart data={[]} />
             </section>
 
             <section className="grid items-stretch gap-3 xl:grid-cols-[0.8fr_1.25fr_1fr]" aria-label="Thống kê chi tiết">
               <FieldStatisticsChart data={reportData.fields} />
-              <DepartmentStatisticsTable data={departmentData} />
-              <OfficerWorkloadTable data={officerData} />
+              <DepartmentStatisticsTable data={[]} />
+              <OfficerWorkloadTable data={[]} />
             </section>
 
             <AttentionCasesTable cases={reportData.attention} onView={(caseId) => navigate('/cases/processing', { state: { caseId } })} />

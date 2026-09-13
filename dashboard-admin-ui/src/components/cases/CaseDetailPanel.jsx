@@ -52,10 +52,8 @@ const detailRows = [
 export default function CaseDetailPanel({ item, onClose, onStatusChange, onChannelChange, onNoteChange }) {
   if (!item) return null
 
-  const riskColor = getRiskColor(item.risk)
-  const aiMessage = item.risk >= 60
-    ? 'Có nguy cơ trễ hạn. Cần theo dõi chặt chẽ tiến độ và xác nhận xử lý.'
-    : 'Tiến độ hiện tại tương đối ổn định. Tiếp tục theo dõi thời hạn xử lý.'
+  const hasAiRisk = item.risk != null
+  const riskColor = hasAiRisk ? getRiskColor(item.risk) : '#94a3b8'
 
   return (
     <aside className="case-detail-panel" aria-label={`Thông tin chi tiết hồ sơ ${item.caseCode}`}>
@@ -96,15 +94,15 @@ export default function CaseDetailPanel({ item, onClose, onStatusChange, onChann
           <div className="detail-risk-grid">
             <div>
               <span>Nguy cơ trễ hạn</span>
-              <strong style={{ color: riskColor }}>{item.risk}%</strong>
-              <div className="detail-risk-progress"><i style={{ width: `${item.risk}%`, backgroundColor: riskColor }} /></div>
+              <strong style={{ color: riskColor }}>{hasAiRisk ? `${item.risk}%` : '—'}</strong>
+              <div className="detail-risk-progress"><i style={{ width: hasAiRisk ? `${item.risk}%` : '0%', backgroundColor: riskColor }} /></div>
             </div>
             <div>
               <span>Thời gian còn lại</span>
               <CountdownText deadlineAt={item.deadlineAt} emphasize />
             </div>
           </div>
-          <div className="ai-assessment"><strong>Nhận định của AI</strong><p>{aiMessage}</p></div>
+          <div className="ai-assessment"><strong>Nhận định của AI</strong><p>{hasAiRisk ? 'Dữ liệu dự đoán đã sẵn sàng.' : 'Chưa có dữ liệu dự đoán AI.'}</p></div>
         </section>
 
         <section className="detail-block">

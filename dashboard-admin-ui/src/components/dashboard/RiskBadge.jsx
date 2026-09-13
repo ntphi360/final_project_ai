@@ -3,10 +3,11 @@ const styles = {
   'Trung bình': { className: 'medium', dot: '#f8b900' },
   Cao: { className: 'high', dot: '#ff7017' },
   'Nghiêm trọng': { className: 'critical', dot: '#ef3340' },
+  'Chưa có AI': { className: '', dot: '#94a3b8' },
 }
 
 export default function RiskBadge({ level }) {
-  const style = styles[level] || styles.Thấp
+  const style = styles[level] || styles['Chưa có AI']
   return (
     <span className={`risk-badge ${style.className}`}>
       <i style={{ backgroundColor: style.dot }} />

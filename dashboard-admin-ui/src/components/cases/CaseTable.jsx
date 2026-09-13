@@ -68,7 +68,7 @@ export default function CaseTable({
           </thead>
           <tbody>
             {cases.map((item) => {
-              const riskColor = getRiskColor(item.risk)
+              const riskColor = item.risk == null ? '#94a3b8' : getRiskColor(item.risk)
               return (
                 <tr className={selectedIds.includes(item.id) ? 'is-selected' : ''} key={item.id}>
                   <td className="checkbox-column">
@@ -86,10 +86,7 @@ export default function CaseTable({
                   <td><span className="table-ellipsis" title={item.officer}>{item.officer}</span></td>
                   <td><CountdownText deadlineAt={item.deadlineAt} /></td>
                   <td>
-                    <div className="case-risk-meter" style={{ '--risk-color': riskColor }}>
-                      <b>{item.risk}%</b>
-                      <span><i style={{ width: `${item.risk}%` }} /></span>
-                    </div>
+                    {item.risk == null ? <span className="text-xs text-slate-400">Chưa có AI</span> : <div className="case-risk-meter" style={{ '--risk-color': riskColor }}><b>{item.risk}%</b><span><i style={{ width: `${item.risk}%` }} /></span></div>}
                   </td>
                   <td><span className={`case-status-badge status-${item.status.replaceAll(' ', '-').toLowerCase()}`}>{item.status}</span></td>
                   <td className="action-column">

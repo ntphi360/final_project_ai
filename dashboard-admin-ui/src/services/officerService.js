@@ -12,11 +12,11 @@ function mapOfficer(item) {
 }
 
 export async function getOfficers() {
-  const { data } = await api.get('/officers')
+  const { data } = await api.get('/api/officers')
   return data.map(mapOfficer)
 }
 
-export async function getDepartments() {
-  const { data } = await api.get('/catalog/departments')
-  return data.map((item) => ({ id: item.id, name: item.name }))
+export async function getOfficersByField(fieldId) {
+  const { data } = await api.get(`/api/officers/field/${fieldId}`)
+  return data.map(mapOfficer)
 }

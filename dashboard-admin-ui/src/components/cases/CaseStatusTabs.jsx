@@ -25,12 +25,14 @@ export default function CaseStatusTabs({ activeTab, cases, onChange }) {
           type="button"
           role="tab"
           aria-selected={activeTab === id}
+          disabled={['Rất cao', 'Cao', 'Trung bình'].includes(id)}
+          title={['Rất cao', 'Cao', 'Trung bình'].includes(id) ? 'Chưa có dữ liệu AI' : undefined}
           className={`case-status-tab ${activeTab === id ? 'is-active' : ''} tab-${id.replaceAll(' ', '-').toLowerCase()}`}
           onClick={() => onChange(id)}
           key={id}
         >
           <Icon size={15} />
-          <span>{label} ({getCount(id)})</span>
+          <span>{label} ({['Rất cao', 'Cao', 'Trung bình'].includes(id) ? '—' : getCount(id)})</span>
         </button>
       ))}
     </div>
