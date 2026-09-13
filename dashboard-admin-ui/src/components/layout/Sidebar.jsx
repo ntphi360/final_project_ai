@@ -26,11 +26,9 @@ const menu = [
   { label: 'Việc được giao', icon: Inbox, path: '/assigned-work' },
   { label: 'Theo dõi giao việc', icon: ClipboardList, path: '/assignment-tracking' },
   { label: 'Import dữ liệu', icon: Import, path: '/data-import' },
-  { label: 'Hồ sơ đã xử lý', icon: CheckCircle2 },
-  { label: 'Báo cáo thống kê', icon: BarChart3 },
-  { label: 'Danh mục', icon: ListTree },
-  { label: 'Người dùng', icon: Users },
-  { label: 'Cài đặt', icon: Settings },
+  // { label: 'Hồ sơ đã xử lý', icon: CheckCircle2 },
+  { label: 'Báo cáo thống kê', icon: BarChart3, path: '/reports' },
+  { label: 'Người dùng', icon: Users, path: '/users' },
 ]
 
 const defaultUser = {

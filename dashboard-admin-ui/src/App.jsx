@@ -5,6 +5,8 @@ import AssignedWork from './pages/AssignedWork'
 import Dashboard from './pages/Dashboard'
 import DataImport from './pages/DataImport'
 import ProcessingCases from './pages/ProcessingCases'
+import Reports from './pages/Reports'
+import Users from './pages/Users'
 
 export default function App() {
   return (
@@ -15,6 +17,8 @@ export default function App() {
       <Route path="/assigned-work" element={<AssignedWork />} />
       <Route path="/assignment-tracking" element={<AssignmentTracking />} />
       <Route path="/data-import" element={<DataImport />} />
+      <Route path="/reports" element={<Reports />} />
+      <Route path="/users" element={<Users />} />
       <Route path="/overview" element={<Dashboard />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
