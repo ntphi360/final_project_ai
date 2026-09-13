@@ -36,7 +36,6 @@ export default function AssignmentTracking() {
   const [activeTab, setActiveTab] = useState('ALL')
   const [draftFilters, setDraftFilters] = useState(emptyFilters)
   const [appliedFilters, setAppliedFilters] = useState(emptyFilters)
-  const [globalSearch, setGlobalSearch] = useState('')
   const [officers, setOfficers] = useState([])
   const [optionsLoading, setOptionsLoading] = useState(true)
   const [optionsError, setOptionsError] = useState('')
@@ -49,12 +48,12 @@ export default function AssignmentTracking() {
     assignerId: appliedFilters.assignerId !== 'all' ? appliedFilters.assignerId : undefined,
     assigneeId: appliedFilters.assigneeId !== 'all' ? appliedFilters.assigneeId : undefined,
     departmentId: appliedFilters.departmentId !== 'all' ? appliedFilters.departmentId : undefined,
-    search: globalSearch.trim() || appliedFilters.query.trim() || undefined,
+    search: appliedFilters.query.trim() || undefined,
     fromDate: appliedFilters.from || undefined,
     toDate: appliedFilters.to || undefined,
     page,
     pageSize,
-  }), [activeTab, appliedFilters, globalSearch, page, pageSize])
+  }), [activeTab, appliedFilters, page, pageSize])
 
   const responseNotifications = useMemo(() => trackingList.items
     .filter((item) => item.status !== 'PENDING')
@@ -93,7 +92,7 @@ export default function AssignmentTracking() {
 
   useEffect(() => {
     dispatch(clearAssignmentDetail())
-  }, [activeTab, appliedFilters, globalSearch, page, pageSize, dispatch])
+  }, [activeTab, appliedFilters, page, pageSize, dispatch])
 
   const resetFilters = () => {
     setPage(1)
@@ -107,7 +106,7 @@ export default function AssignmentTracking() {
     <div className={`app-shell processing-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       <Sidebar />
       <div className="app-main">
-        <Header showBreadcrumb={false} onSearch={setGlobalSearch} onNotificationClick={() => setNotificationsOpen((open) => !open)} notificationCount={trackingSummary.accepted + trackingSummary.rejected} />
+        <Header onNotificationClick={() => setNotificationsOpen((open) => !open)} notificationCount={trackingSummary.accepted + trackingSummary.rejected} />
         {notificationsOpen && (
           <section className="fixed right-5 top-[62px] z-[70] w-[min(380px,calc(100vw-24px))] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xl" aria-label="Thông báo phản hồi giao việc">
             <header className="border-b border-slate-200 px-4 py-3 text-sm font-bold text-slate-900">Phản hồi giao việc</header>
@@ -119,7 +118,6 @@ export default function AssignmentTracking() {
         )}
         <main className="px-4 pb-10 pt-4 sm:px-5 xl:px-6">
           <header className="mb-4">
-            <p className="mb-2 text-xs text-slate-500">Trang chủ <span className="mx-1">›</span> Theo dõi giao việc</p>
             <h1 className="text-2xl font-bold tracking-tight text-slate-950 lg:text-[29px]">Theo dõi giao việc</h1>
             <p className="mt-1 text-sm text-slate-500">Theo dõi tình trạng tiếp nhận và phản hồi của các công việc đã giao.</p>
           </header>

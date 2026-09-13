@@ -20,7 +20,12 @@ from app.services.dashboard_service import (
     getRecentCases,
     getStatusDistribution,
 )
-from app.services.import_case_service import importCases
+from app.services.import_case_service import (
+    getImportHistories,
+    getImportHistoryById,
+    importCases,
+    recordFailedImport,
+)
 from app.services.officer_service import (
     assignOfficerToField,
     getFieldsByOfficer,
@@ -37,6 +42,9 @@ __all__ = [
     "getCompletedCases",
     "backfillCaseRelations",
     "importCases",
+    "getImportHistories",
+    "getImportHistoryById",
+    "recordFailedImport",
     "getDepartments",
     "getFields",
     "getProcedures",

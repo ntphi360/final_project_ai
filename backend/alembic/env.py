@@ -12,6 +12,7 @@ from app.models import (
     Department,
     DepartmentField,
     Field,
+    ImportHistory,
     Officer,
     OfficerField,
     Procedure,

@@ -1,7 +1,6 @@
-import { Bell, ChevronDown, LogOut, Menu, Search } from 'lucide-react'
+import { Bell, ChevronDown, LogOut, Menu } from 'lucide-react'
 import { useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
-import { setSearchTerm } from '../../features/dashboard/dashboardSlice'
 import { toggleMobileSidebar } from '../../features/ui/uiSlice'
 import Breadcrumb from './Breadcrumb'
 
@@ -12,8 +11,6 @@ const defaultUser = {
 }
 
 export default function Header({
-  showBreadcrumb = true,
-  onSearch,
   onNotificationClick,
   notificationCount = 3,
   user = defaultUser,
@@ -21,16 +18,8 @@ export default function Header({
   const dispatch = useDispatch()
   const navigate = useNavigate()
 
-  const handleSearch = (value) => {
-    if (onSearch) {
-      onSearch(value)
-      return
-    }
-    dispatch(setSearchTerm(value))
-  }
-
   return (
-    <header className={`top-header ${showBreadcrumb ? '' : 'without-breadcrumb'}`}>
+    <header className="top-header">
       <button
         type="button"
         className="icon-button menu-button"
@@ -40,17 +29,7 @@ export default function Header({
         <Menu size={23} />
       </button>
 
-      {showBreadcrumb && <Breadcrumb />}
-
-      <label className="global-search">
-        <Search size={17} />
-        <input
-          type="search"
-          placeholder="Tìm kiếm mã hồ sơ, tên thủ tục, cán bộ, phòng ban..."
-          onChange={(event) => handleSearch(event.target.value)}
-        />
-        <kbd>Ctrl K</kbd>
-      </label>
+      <Breadcrumb />
 
       <div className="header-actions">
         <button type="button" className="notification-button" aria-label="Thông báo" onClick={onNotificationClick || (() => navigate('/assignment-tracking'))}>
@@ -63,6 +42,7 @@ export default function Header({
           <span>{user.role}</span>
         </div>
         <ChevronDown size={17} className="header-chevron" />
+        <span className="header-divider" aria-hidden="true" />
         <button type="button" className="logout-button">
           <LogOut size={18} />
           <span>Đăng xuất</span>

@@ -34,7 +34,6 @@ export default function AssignedWork() {
   const [activeTab, setActiveTab] = useState('ALL')
   const [draftFilters, setDraftFilters] = useState(emptyFilters)
   const [appliedFilters, setAppliedFilters] = useState(emptyFilters)
-  const [globalSearch, setGlobalSearch] = useState('')
   const [acceptModalOpen, setAcceptModalOpen] = useState(false)
   const [rejectModalOpen, setRejectModalOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
@@ -45,12 +44,12 @@ export default function AssignedWork() {
 
   const queryParams = useMemo(() => ({
     status: activeTab !== 'ALL' ? activeTab : appliedFilters.status !== 'all' ? appliedFilters.status : undefined,
-    search: globalSearch.trim() || appliedFilters.query.trim() || undefined,
+    search: appliedFilters.query.trim() || undefined,
     fromDate: appliedFilters.fromDate || undefined,
     toDate: appliedFilters.toDate || undefined,
     page,
     pageSize,
-  }), [activeTab, appliedFilters, globalSearch, page, pageSize])
+  }), [activeTab, appliedFilters, page, pageSize])
 
   const receiverUser = useMemo(() => {
     const assignment = myList.items.find((item) => item.assigneeId === currentAssigneeId)
@@ -79,7 +78,7 @@ export default function AssignedWork() {
 
   useEffect(() => {
     dispatch(clearAssignmentDetail())
-  }, [activeTab, appliedFilters, globalSearch, page, pageSize, dispatch])
+  }, [activeTab, appliedFilters, page, pageSize, dispatch])
 
   useEffect(() => {
     if (!toast) return undefined
@@ -138,7 +137,7 @@ export default function AssignedWork() {
     <div className={`app-shell processing-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       <Sidebar user={receiverUser} />
       <div className="app-main">
-        <Header showBreadcrumb={false} onSearch={setGlobalSearch} onNotificationClick={openLatestNotification} notificationCount={mySummary.pending} user={receiverUser} />
+        <Header onNotificationClick={openLatestNotification} notificationCount={mySummary.pending} user={receiverUser} />
         <main className="w-full px-4 pb-10 pt-4 sm:px-5 xl:px-6">
           <header className="mb-4">
             <h1 className="text-2xl font-bold tracking-tight text-slate-950 lg:text-[29px]">Việc được giao</h1>

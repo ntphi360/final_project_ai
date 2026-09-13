@@ -13,6 +13,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.models.case import Case
+from app.models.import_history import ImportHistory, ImportHistoryStatus
 from app.schemas.import_case import ImportCaseResult
 from app.services.case_relation_service import (
     loadCaseRelationLookups,
@@ -99,6 +100,48 @@ class ImportCaseValidationError(Exception):
 
 class ImportCaseDatabaseError(Exception):
     pass
+
+
+def getImportHistories(
+    db: Session,
+    limit: int = 100,
+) -> list[ImportHistory]:
+    statement = (
+        select(ImportHistory)
+        .order_by(
+            ImportHistory.imported_at.desc(),
+            ImportHistory.id.desc(),
+        )
+        .limit(limit)
+    )
+    return list(db.scalars(statement).all())
+
+
+def getImportHistoryById(
+    db: Session,
+    historyId: int,
+) -> ImportHistory | None:
+    return db.get(ImportHistory, historyId)
+
+
+def recordFailedImport(
+    db: Session,
+    fileName: str,
+    errorMessage: str,
+) -> None:
+    """Persist a failed attempt without masking the original import error."""
+    try:
+        db.rollback()
+        db.add(
+            ImportHistory(
+                file_name=fileName or "Không xác định",
+                status=ImportHistoryStatus.FAILED.value,
+                error_message=errorMessage,
+            )
+        )
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
 
 
 def normalizeUnicode(value: Any) -> str:
@@ -422,6 +465,8 @@ def importCases(
         .copy()
     )
 
+    validRecordCount = len(validDataFrame)
+
     # Nếu cùng case_code xuất hiện nhiều lần,
     # lấy record cuối cùng.
     validDataFrame = (
@@ -431,6 +476,8 @@ def importCases(
             keep="last",
         )
     )
+
+    skippedRecords = validRecordCount - len(validDataFrame)
 
     # NaN / NaT -> None cho SQLAlchemy.
     validDataFrame = validDataFrame.astype(
@@ -614,6 +661,32 @@ def importCases(
             else:
                 completedRecords += 1
 
+        processedRecords = insertedRecords + updatedRecords
+        if processedRecords == 0:
+            historyStatus = ImportHistoryStatus.FAILED.value
+            historyError = "Không có bản ghi hợp lệ để import"
+        elif errorRecords > 0 or skippedRecords > 0:
+            historyStatus = ImportHistoryStatus.PARTIAL.value
+            historyError = (
+                f"Có {errorRecords} dòng lỗi và {skippedRecords} dòng trùng bị bỏ qua"
+            )
+        else:
+            historyStatus = ImportHistoryStatus.SUCCESS.value
+            historyError = None
+
+        db.add(
+            ImportHistory(
+                file_name=file.filename or "Không xác định",
+                total_rows=totalRecords,
+                created_rows=insertedRecords,
+                updated_rows=updatedRecords,
+                skipped_rows=skippedRecords,
+                error_rows=errorRecords,
+                status=historyStatus,
+                error_message=historyError,
+            )
+        )
+
         db.commit()
 
     except SQLAlchemyError as exc:
@@ -629,6 +702,7 @@ def importCases(
         total_records=totalRecords,
         inserted_records=insertedRecords,
         updated_records=updatedRecords,
+        skipped_records=skippedRecords,
         error_records=errorRecords,
         completed_records=completedRecords,
         processing_records=processingRecords,

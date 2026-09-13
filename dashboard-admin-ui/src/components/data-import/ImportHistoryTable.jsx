@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight, Eye } from 'lucide-react'
-import { formatImportDate, formatImportNumber, importStatus } from '../../data/mockImports'
+import { formatImportDate, formatImportNumber, importStatus } from '../../services/importService'
 
 export default function ImportHistoryTable({ items, page, pageSize, onPageChange, onView }) {
   const totalPages = Math.max(1, Math.ceil(items.length / pageSize))
@@ -10,8 +10,8 @@ export default function ImportHistoryTable({ items, page, pageSize, onPageChange
   return (
     <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
       <header className="border-b border-slate-200 px-4 py-3">
-        <h2 className="text-base font-bold text-slate-900">Lịch sử import (dữ liệu mẫu)</h2>
-        <p className="mt-1 text-xs text-slate-500">Backend chưa có API lịch sử import; các dòng có sẵn bên dưới là mock tạm thời.</p>
+        <h2 className="text-base font-bold text-slate-900">Lịch sử import</h2>
+        <p className="mt-1 text-xs text-slate-500">Các lần import gần nhất được lưu trên hệ thống.</p>
       </header>
       <div className="overflow-x-auto">
         <table className="min-w-[720px] table-fixed border-collapse text-sm text-slate-700">
@@ -26,7 +26,7 @@ export default function ImportHistoryTable({ items, page, pageSize, onPageChange
           </thead>
           <tbody>
             {pageItems.map((item) => {
-              const status = importStatus[item.status]
+              const status = importStatus[item.status] || importStatus.FAILED
               return (
                 <tr className="transition hover:bg-slate-50" key={item.id}>
                   <td className="h-12 border-b border-slate-100 px-3 tabular-nums">{formatImportDate(item.importedAt)}</td>
@@ -39,6 +39,7 @@ export default function ImportHistoryTable({ items, page, pageSize, onPageChange
             })}
           </tbody>
         </table>
+        {items.length === 0 && <p className="px-4 py-10 text-center text-sm text-slate-500">Chưa có lịch sử import.</p>}
       </div>
       <footer className="flex min-h-14 flex-col gap-3 px-4 py-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
         <span>Hiển thị {firstItem} - {lastItem} của {items.length} lần import</span>

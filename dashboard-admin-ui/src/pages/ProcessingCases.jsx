@@ -41,7 +41,6 @@ export default function ProcessingCases() {
   const [activeTab, setActiveTab] = useState('all')
   const [draftFilters, setDraftFilters] = useState(emptyFilters)
   const [appliedFilters, setAppliedFilters] = useState(emptyFilters)
-  const [globalSearch, setGlobalSearch] = useState('')
   const [selectedIds, setSelectedIds] = useState([])
   const [detailCaseId, setDetailCaseId] = useState(null)
   const [detailData, setDetailData] = useState(null)
@@ -124,7 +123,6 @@ export default function ProcessingCases() {
       || (['Rất cao', 'Cao', 'Trung bình'].includes(activeTab) && item.priority === activeTab)
       || item.status === activeTab
     const localQuery = normalizeSearch(appliedFilters.query)
-    const headerQuery = normalizeSearch(globalSearch)
     const searchableText = normalizeSearch([
       item.caseCode,
       item.procedure,
@@ -136,12 +134,11 @@ export default function ProcessingCases() {
 
     return tabMatches
       && (!localQuery || searchableText.includes(localQuery))
-      && (!headerQuery || searchableText.includes(headerQuery))
       && (appliedFilters.field === 'all' || item.field === appliedFilters.field)
       && (appliedFilters.department === 'all' || item.department === appliedFilters.department)
       && (appliedFilters.officer === 'all' || item.officer === appliedFilters.officer)
       && (appliedFilters.status === 'all' || item.status === appliedFilters.status)
-  }), [activeTab, appliedFilters, cases, globalSearch])
+  }), [activeTab, appliedFilters, cases])
 
   const totalPages = Math.max(1, Math.ceil(filteredCases.length / pageSize))
   const pageCases = filteredCases.slice((page - 1) * pageSize, page * pageSize)
@@ -163,7 +160,7 @@ export default function ProcessingCases() {
     setBulkAction(null)
     setBulkChannels(emptyBulkChannels)
     setDetailCaseId(null)
-  }, [activeTab, appliedFilters, globalSearch, page, pageSize])
+  }, [activeTab, appliedFilters, page, pageSize])
 
   const updateCase = (caseId, changes) => {
     setCases((currentCases) => currentCases.map((item) => (
@@ -234,7 +231,7 @@ export default function ProcessingCases() {
     <div className={`app-shell processing-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       <Sidebar />
       <div className="app-main">
-        <Header showBreadcrumb={false} onSearch={setGlobalSearch} />
+        <Header />
         <main className="processing-page">
           <div className={`case-workspace ${detailCase ? 'has-detail-panel' : ''}`}>
             <div className="case-list-column">

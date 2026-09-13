@@ -23,7 +23,6 @@ export default function Users() {
   const [users, setUsers] = useState(initialUsers)
   const [draftFilters, setDraftFilters] = useState(emptyFilters)
   const [appliedFilters, setAppliedFilters] = useState(emptyFilters)
-  const [globalSearch, setGlobalSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [detailId, setDetailId] = useState(null)
@@ -35,14 +34,12 @@ export default function Users() {
 
   const filteredUsers = useMemo(() => users.filter((user) => {
     const query = normalize(appliedFilters.query)
-    const headerQuery = normalize(globalSearch)
     const searchable = normalize(`${user.fullName} ${user.email} ${user.phoneNumber} ${user.departmentName || ''}`)
     return (!query || searchable.includes(query))
-      && (!headerQuery || searchable.includes(headerQuery))
       && (appliedFilters.role === 'all' || user.role === appliedFilters.role)
       && (appliedFilters.department === 'all' || user.departmentName === appliedFilters.department)
       && (appliedFilters.status === 'all' || (appliedFilters.status === 'active' ? user.isActive : !user.isActive))
-  }), [appliedFilters, globalSearch, users])
+  }), [appliedFilters, users])
 
   const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize))
   const pageUsers = filteredUsers.slice((page - 1) * pageSize, page * pageSize)
@@ -109,9 +106,9 @@ export default function Users() {
     <div className={`app-shell processing-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       <Sidebar />
       <div className="app-main">
-        <Header showBreadcrumb={false} onSearch={setGlobalSearch} />
+        <Header />
         <main className="min-w-0 px-4 pb-10 pt-4 sm:px-5 xl:px-6">
-          <header className="mb-4 flex items-start justify-between gap-4"><div><p className="mb-2 text-xs text-slate-500">Trang chủ <span className="mx-1">›</span> Người dùng</p><h1 className="text-2xl font-bold tracking-tight text-slate-950 lg:text-[29px]">Quản lý người dùng</h1><p className="mt-1 text-sm text-slate-500">Quản lý tài khoản và quyền truy cập hệ thống.</p></div><button type="button" className="flex h-10 shrink-0 items-center gap-2 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-blue-700" onClick={openAddForm}><UserPlus size={18} /> Thêm người dùng</button></header>
+          <header className="mb-4 flex items-start justify-between gap-4"><div><h1 className="text-2xl font-bold tracking-tight text-slate-950 lg:text-[29px]">Quản lý người dùng</h1><p className="mt-1 text-sm text-slate-500">Quản lý tài khoản và quyền truy cập hệ thống.</p></div><button type="button" className="flex h-10 shrink-0 items-center gap-2 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-blue-700" onClick={openAddForm}><UserPlus size={18} /> Thêm người dùng</button></header>
           <div className="space-y-3">
             <UserSummaryCards users={users} />
             <UserFilterBar filters={draftFilters} departments={departments} onChange={(key, value) => setDraftFilters((current) => ({ ...current, [key]: value }))} onApply={() => { setPage(1); setAppliedFilters({ ...draftFilters }) }} onReset={resetFilters} />

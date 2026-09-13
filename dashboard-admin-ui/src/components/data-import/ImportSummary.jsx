@@ -1,5 +1,5 @@
 import { AlertCircle, CheckCircle2, Eye, FileSpreadsheet, SkipForward } from 'lucide-react'
-import { formatImportNumber } from '../../data/mockImports'
+import { formatImportNumber } from '../../services/importService'
 
 const items = [
   { key: 'totalRows', label: 'Tổng số dòng', icon: FileSpreadsheet, tone: 'bg-blue-50 text-blue-700' },
@@ -28,7 +28,7 @@ export default function ImportSummary({ result, onViewErrors }) {
       <dl className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-600">
         <div className="flex justify-between rounded-md bg-slate-50 px-3 py-2"><dt>Thêm mới</dt><dd className="font-bold text-slate-900">{formatImportNumber(result.insertedRows || 0)}</dd></div>
         <div className="flex justify-between rounded-md bg-slate-50 px-3 py-2"><dt>Cập nhật</dt><dd className="font-bold text-slate-900">{formatImportNumber(result.updatedRows || 0)}</dd></div>
-        <div className="flex justify-between rounded-md bg-slate-50 px-3 py-2"><dt>Chưa ánh xạ</dt><dd className="font-bold text-slate-900">{formatImportNumber(result.skippedRows || 0)}</dd></div>
+        <div className="flex justify-between rounded-md bg-slate-50 px-3 py-2"><dt>Chưa ánh xạ</dt><dd className="font-bold text-slate-900">{formatImportNumber(result.unmappedRows || 0)}</dd></div>
         <div className="flex justify-between rounded-md bg-slate-50 px-3 py-2"><dt>Sai lĩnh vực</dt><dd className="font-bold text-slate-900">{formatImportNumber(result.fieldMismatchRows || 0)}</dd></div>
       </dl>
     </section>

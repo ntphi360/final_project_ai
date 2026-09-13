@@ -119,10 +119,10 @@ export default function Reports() {
     <div className={`app-shell processing-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       <Sidebar />
       <div className="app-main">
-        <Header showBreadcrumb={false} />
+        <Header />
         <main className="px-4 pb-10 pt-4 sm:px-5 xl:px-6">
           <header className="mb-4 flex items-start justify-between gap-4">
-            <div><p className="mb-2 text-xs text-slate-500">Trang chủ <span className="mx-1">›</span> Báo cáo thống kê</p><h1 className="text-2xl font-bold tracking-tight text-slate-950 lg:text-[29px]">Báo cáo thống kê</h1><p className="mt-1 text-sm text-slate-500">Tổng hợp và theo dõi tình hình xử lý hồ sơ.</p></div>
+            <div><h1 className="text-2xl font-bold tracking-tight text-slate-950 lg:text-[29px]">Báo cáo thống kê</h1><p className="mt-1 text-sm text-slate-500">Tổng hợp và theo dõi tình hình xử lý hồ sơ.</p></div>
             <div className="relative shrink-0">
               <button type="button" aria-expanded={exportOpen} className="flex h-10 items-center gap-2 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-blue-700" onClick={() => setExportOpen((open) => !open)}><Download size={17} /> Xuất báo cáo <ChevronDown size={15} /></button>
               {exportOpen && <div className="absolute right-0 top-12 z-30 w-44 rounded-lg border border-slate-200 bg-white p-1.5 shadow-xl"><button type="button" className="flex h-9 w-full items-center gap-2 rounded-md px-3 text-left text-sm text-slate-700 hover:bg-slate-50" onClick={() => showPendingFeature('Backend chưa có API xuất Excel.')}><FileSpreadsheet size={16} className="text-emerald-600" /> Xuất Excel</button><button type="button" className="flex h-9 w-full items-center gap-2 rounded-md px-3 text-left text-sm text-slate-700 hover:bg-slate-50" onClick={() => showPendingFeature('Backend chưa có API xuất PDF.')}><FileText size={16} className="text-red-500" /> Xuất PDF</button></div>}

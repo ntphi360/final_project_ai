@@ -1,19 +1,20 @@
 import { AlertCircle, CalendarClock, CheckCircle2, FileSpreadsheet, SkipForward, X } from 'lucide-react'
-import { formatImportDate, formatImportNumber, importStatus } from '../../data/mockImports'
+import { formatImportDate, formatImportNumber, importStatus } from '../../services/importService'
 
 const rows = [
   { key: 'totalRows', label: 'Tổng số bản ghi', icon: FileSpreadsheet },
-  { key: 'successRows', label: 'Thành công', icon: CheckCircle2 },
+  { key: 'createdRows', label: 'Đã thêm', icon: CheckCircle2 },
+  { key: 'updatedRows', label: 'Đã cập nhật', icon: CheckCircle2 },
   { key: 'skippedRows', label: 'Bỏ qua', icon: SkipForward },
   { key: 'errorRows', label: 'Lỗi', icon: AlertCircle },
 ]
 
 export default function ImportHistoryDetail({ item, onClose, onViewErrors }) {
   if (!item) return null
-  const status = importStatus[item.status]
+  const status = importStatus[item.status] || importStatus.FAILED
 
   return (
-    <aside className="fixed inset-y-[70px] right-0 z-50 w-[min(440px,94vw)] overflow-y-auto border-l border-slate-200 bg-white shadow-2xl" aria-label={`Chi tiết import ${item.fileName}`}>
+    <aside className="fixed bottom-0 right-0 top-[58px] z-50 w-[min(440px,94vw)] overflow-y-auto border-l border-slate-200 bg-white shadow-2xl" aria-label={`Chi tiết import ${item.fileName}`}>
       <header className="sticky top-0 flex h-12 items-center justify-between border-b border-slate-200 bg-white px-4">
         <h2 className="text-base font-bold text-slate-900">Chi tiết import</h2>
         <button type="button" aria-label="Đóng chi tiết import" className="grid h-8 w-8 place-items-center rounded-md text-slate-500 hover:bg-slate-100" onClick={onClose}><X size={19} /></button>
@@ -37,6 +38,7 @@ export default function ImportHistoryDetail({ item, onClose, onViewErrors }) {
             ))}
           </dl>
         </section>
+        {item.errorMessage && <p className="rounded-lg border border-red-100 bg-red-50 px-3 py-2.5 text-sm text-red-700">{item.errorMessage}</p>}
         {item.errorRows > 0 && <button type="button" className="flex h-10 w-full items-center justify-center gap-2 rounded-md border border-red-200 bg-red-50 text-sm font-semibold text-red-700 hover:bg-red-100" onClick={() => onViewErrors(item.errors)}><AlertCircle size={17} /> Xem lỗi</button>}
       </div>
     </aside>

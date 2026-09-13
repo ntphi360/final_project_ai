@@ -37,7 +37,6 @@ export default function Assignment() {
   const [actionError, setActionError] = useState('')
   const [draftFilters, setDraftFilters] = useState(emptyFilters)
   const [appliedFilters, setAppliedFilters] = useState(emptyFilters)
-  const [globalSearch, setGlobalSearch] = useState('')
   const [selectedIds, setSelectedIds] = useState([])
   const [form, setForm] = useState(initialForm)
   const [page, setPage] = useState(1)
@@ -86,15 +85,13 @@ export default function Assignment() {
 
   const filteredCases = useMemo(() => cases.filter((item) => {
     const query = normalize(appliedFilters.query)
-    const headerQuery = normalize(globalSearch)
     const searchable = normalize(`${item.caseCode} ${item.procedure} ${item.field} ${item.department} ${item.officer}`)
     return (!query || searchable.includes(query))
-      && (!headerQuery || searchable.includes(headerQuery))
       && (appliedFilters.field === 'all' || item.field === appliedFilters.field)
       && (appliedFilters.department === 'all' || item.department === appliedFilters.department)
       && (appliedFilters.officer === 'all' || item.officer === appliedFilters.officer)
       && (appliedFilters.status === 'all' || item.status === appliedFilters.status)
-  }), [appliedFilters, cases, globalSearch])
+  }), [appliedFilters, cases])
 
   const totalPages = Math.max(1, Math.ceil(filteredCases.length / pageSize))
   const pageCases = filteredCases.slice((page - 1) * pageSize, page * pageSize)
@@ -152,7 +149,7 @@ export default function Assignment() {
 
   useEffect(() => {
     setSelectedIds([])
-  }, [appliedFilters, globalSearch, page, pageSize])
+  }, [appliedFilters, page, pageSize])
 
   useEffect(() => {
     if (!toast) return undefined
@@ -205,7 +202,7 @@ export default function Assignment() {
     <div className={`app-shell processing-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       <Sidebar />
       <div className="app-main">
-        <Header showBreadcrumb={false} onSearch={setGlobalSearch} />
+        <Header />
         <main className="w-full px-4 pb-10 pt-4 sm:px-5 xl:px-6">
           <header className="mb-4">
             <h1 className="text-2xl font-bold tracking-tight text-slate-950 lg:text-[29px]">Giao việc</h1>

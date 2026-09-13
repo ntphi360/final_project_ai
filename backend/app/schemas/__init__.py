@@ -14,7 +14,11 @@ from app.schemas.dashboard import (
 )
 from app.schemas.department import DepartmentResponse
 from app.schemas.field import FieldResponse
-from app.schemas.import_case import ImportCaseResult
+from app.schemas.import_case import (
+    ImportCaseResult,
+    ImportHistoryDetailResponse,
+    ImportHistoryResponse,
+)
 from app.schemas.officer import (
     OfficerFieldAssignmentResponse,
     OfficerResponse,
@@ -29,6 +33,8 @@ __all__ = [
     "CaseDepartmentResponse",
     "CaseOfficerResponse",
     "ImportCaseResult",
+    "ImportHistoryResponse",
+    "ImportHistoryDetailResponse",
     "DepartmentResponse",
     "FieldResponse",
     "ProcedureResponse",
