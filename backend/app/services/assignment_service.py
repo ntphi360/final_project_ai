@@ -42,7 +42,7 @@ class OfficerNotFoundError(Exception):
         self.officerId = officerId
 
 
-def createAssignments(
+async def createAssignments(
     db: Session,
     data: AssignmentCreate,
     assignerId: int,
@@ -116,13 +116,13 @@ def createAssignments(
         assignment = savedById[assignmentId]
         try:
             recipient = db.scalar(select(User).where(User.officer_id == assignment.assignee_id))
-            result = sendAssignmentNotification(assignment, recipient)
+            result = await sendAssignmentNotification(assignment, recipient)
             saveNotificationLogs(db, assignment, recipient, result)
         except Exception:
             db.rollback()
             result = {
                 "assignment_id": assignmentId,
-                "email": _notificationFailure("RESEND") if assignment.send_email else None,
+                "email": _notificationFailure("GMAIL_SMTP") if assignment.send_email else None,
                 "sms": _notificationFailure("TEXTBEE") if assignment.send_sms else None,
             }
         notificationResults.append(AssignmentNotificationResult.model_validate(result))

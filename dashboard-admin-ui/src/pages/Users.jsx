@@ -10,6 +10,7 @@ import UserFormModal from '../components/users/UserFormModal'
 import UserStatusConfirmModal from '../components/users/UserStatusConfirmModal'
 import UserSummaryCards from '../components/users/UserSummaryCards'
 import UserTable from '../components/users/UserTable'
+import { getDepartments } from '../services/catalogService'
 import { getOfficers } from '../services/officerService'
 import { getApiErrorMessage } from '../services/serviceUtils'
 import { createUser, getUserById, getUsers, resetUserPassword, updateUser, updateUserStatus } from '../services/userService'
@@ -25,6 +26,7 @@ export default function Users() {
   const currentUserId = useSelector((state) => state.auth.user?.id)
   const [users, setUsers] = useState([])
   const [officers, setOfficers] = useState([])
+  const [departments, setDepartments] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [actionError, setActionError] = useState('')
@@ -44,9 +46,10 @@ export default function Users() {
     setLoading(true)
     setLoadError('')
     try {
-      const [userItems, officerItems] = await Promise.all([getUsers(), getOfficers()])
+      const [userItems, officerItems, departmentItems] = await Promise.all([getUsers(), getOfficers(), getDepartments()])
       setUsers(userItems)
       setOfficers(officerItems)
+      setDepartments(departmentItems)
     } catch (error) {
       setLoadError(getApiErrorMessage(error, 'Không thể tải danh sách người dùng.'))
     } finally {
@@ -170,7 +173,7 @@ export default function Users() {
       </div>
 
       <UserDetailPanel user={detailUser} currentUserId={currentUserId} onClose={() => setDetailId(null)} onEdit={() => openEditForm(detailUser.id)} onToggleStatus={() => setStatusTargetId(detailUser.id)} onResetPassword={() => setResetTargetId(detailUser.id)} />
-      <UserFormModal open={Boolean(formMode)} mode={formMode} user={formUser} users={users} officers={officers} currentUserId={currentUserId} saving={saving} apiError={actionError} onClose={() => { setFormMode(null); setFormUserId(null); setActionError('') }} onSave={saveUser} />
+      <UserFormModal open={Boolean(formMode)} mode={formMode} user={formUser} users={users} officers={officers} departments={departments} currentUserId={currentUserId} saving={saving} apiError={actionError} onClose={() => { setFormMode(null); setFormUserId(null); setActionError('') }} onSave={saveUser} />
       <UserStatusConfirmModal user={statusTarget} onCancel={() => setStatusTargetId(null)} onConfirm={confirmStatusChange} />
       <ResetPasswordModal user={resetTarget} loading={saving} error={actionError} onCancel={() => { setResetTargetId(null); setActionError('') }} onConfirm={confirmPasswordReset} />
 

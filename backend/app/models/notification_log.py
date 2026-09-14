@@ -12,7 +12,10 @@ class NotificationLog(Base):
     __tablename__ = "notification_logs"
     __table_args__ = (
         CheckConstraint("channel IN ('EMAIL', 'SMS')", name="ck_notification_logs_channel"),
-        CheckConstraint("provider IN ('RESEND', 'TEXTBEE')", name="ck_notification_logs_provider"),
+        CheckConstraint(
+            "provider IN ('RESEND', 'GMAIL_SMTP', 'TEXTBEE')",
+            name="ck_notification_logs_provider",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)

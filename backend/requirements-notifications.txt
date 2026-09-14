@@ -1,2 +1,2 @@
-resend==2.44.0
+fastapi-mail==1.6.8
 requests==2.34.2

@@ -44,14 +44,14 @@ assignmentReaders = requireRoles("ADMIN", "SUPERVISOR", "OFFICER")
 
 
 @router.post("", response_model=AssignmentCreateResponse, status_code=201)
-def createAssignmentBatch(
+async def createAssignmentBatch(
     data: AssignmentCreate,
     db: Session = Depends(getDb),
     currentUser: User = Depends(managementOnly),
 ):
     assigner_id = _requireOfficerId(currentUser)
     try:
-        assignments, skipped, notifications = createAssignments(
+        assignments, skipped, notifications = await createAssignments(
             db=db,
             data=data,
             assignerId=assigner_id,

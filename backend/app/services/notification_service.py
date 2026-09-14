@@ -11,7 +11,7 @@ from app.services.email_service import sendEmail
 from app.services.sms_service import normalizeVietnamPhone, sendSms
 
 
-def sendAssignmentNotification(
+async def sendAssignmentNotification(
     assignment: Assignment,
     recipient: User | None,
 ) -> dict[str, Any]:
@@ -23,9 +23,9 @@ def sendAssignmentNotification(
 
     if assignment.send_email:
         if recipient is None or not recipient.email:
-            results["email"] = _missing("RESEND", "Người nhận chưa có email.")
+            results["email"] = _missing("GMAIL_SMTP", "Người nhận chưa có email.")
         else:
-            results["email"] = sendEmail(
+            results["email"] = await sendEmail(
                 recipient.email,
                 f"[Giao việc] Hồ sơ {assignment.case.case_code}",
                 _emailContent(assignment),
@@ -47,7 +47,7 @@ def saveNotificationLogs(
     results: dict[str, Any],
 ) -> None:
     for channel, provider, recipientValue in (
-        ("EMAIL", "RESEND", recipient.email if recipient else None),
+        ("EMAIL", "GMAIL_SMTP", recipient.email if recipient else None),
         ("SMS", "TEXTBEE", normalizeVietnamPhone(recipient.phone_number) if recipient else None),
     ):
         result = results[channel.lower()]
