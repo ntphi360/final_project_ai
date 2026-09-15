@@ -11,7 +11,12 @@ import CaseTable from '../components/cases/CaseTable'
 import RiskSummaryCards from '../components/cases/RiskSummaryCards'
 import Header from '../components/layout/Header'
 import Sidebar from '../components/layout/Sidebar'
-import { getCaseById, getProcessingCases } from '../services/caseService'
+import {
+  getCaseById,
+  getProcessingCases,
+  performCaseAction,
+  performCaseBulkAction,
+} from '../services/caseService'
 import { getDepartments, getFields } from '../services/catalogService'
 import { getOfficers } from '../services/officerService'
 import { getApiErrorMessage } from '../services/serviceUtils'
@@ -58,6 +63,7 @@ export default function ProcessingCases() {
   const [bulkAction, setBulkAction] = useState(null)
   const [bulkChannels, setBulkChannels] = useState(emptyBulkChannels)
   const [confirmModalOpen, setConfirmModalOpen] = useState(false)
+  const [actionSubmitting, setActionSubmitting] = useState(false)
   const [feedback, setFeedback] = useState('')
 
   const loadCases = useCallback(async () => {
@@ -234,27 +240,33 @@ export default function ProcessingCases() {
     setBulkChannels((current) => ({ ...current, [channel]: !current[channel] }))
   }
 
-  const handleConfirmBulkAction = () => {
-    const nextStatus = bulkAction === 'follow' ? 'Chờ xác nhận' : 'Đã xác nhận'
-    const shouldSendNotifications = bulkAction === 'confirm'
-    const notificationChannels = shouldSendNotifications
-      ? [
-          ...(bulkChannels.email ? ['Email'] : []),
-          ...(bulkChannels.sms ? ['SMS'] : []),
-        ]
-      : []
-    const validIds = new Set(validSelectedCases.map((item) => item.id))
+  const handleConfirmBulkAction = async () => {
+    if (!bulkAction || actionSubmitting) return
 
-    setCases((currentCases) => currentCases.map((item) => {
-      if (!validIds.has(item.id)) return item
-      if (!shouldSendNotifications) return { ...item, status: nextStatus }
-      return { ...item, status: nextStatus, channels: notificationChannels }
-    }))
-    setFeedback(`Đã xử lý ${validSelectedCases.length} hồ sơ. Bỏ qua ${skippedCount} hồ sơ không hợp lệ.`)
-    setConfirmModalOpen(false)
-    setSelectedIds([])
-    setBulkAction(null)
-    setBulkChannels(emptyBulkChannels)
+    const isConfirm = bulkAction === 'confirm'
+    setActionSubmitting(true)
+    try {
+      const result = await performCaseBulkAction({
+        case_ids: selectedIds,
+        action: isConfirm ? 'CONFIRM' : 'FOLLOW',
+        send_email: isConfirm && bulkChannels.email,
+        send_sms: isConfirm && bulkChannels.sms,
+        note: null,
+      })
+      setFeedback(
+        `Đã xử lý ${result.success_count} hồ sơ. Bỏ qua ${result.skipped_count} hồ sơ. `
+        + `Thông báo gửi thất bại: ${result.failed_notification_count}.`,
+      )
+      setConfirmModalOpen(false)
+      setSelectedIds([])
+      setBulkAction(null)
+      setBulkChannels(emptyBulkChannels)
+      await loadCases()
+    } catch (error) {
+      setFeedback(getApiErrorMessage(error, 'Không thể thực hiện thao tác hàng loạt.'))
+    } finally {
+      setActionSubmitting(false)
+    }
   }
 
   const handleDetailChannelChange = (channel) => {
@@ -264,6 +276,34 @@ export default function ProcessingCases() {
         ? detailCase.channels.filter((item) => item !== channel)
         : [...detailCase.channels, channel],
     })
+  }
+
+  const handleDetailAction = async (action) => {
+    if (!detailCase || actionSubmitting) return
+
+    const isConfirm = action === 'CONFIRM'
+    setActionSubmitting(true)
+    try {
+      const result = await performCaseAction(detailCase.id, {
+        action,
+        send_email: isConfirm && detailCase.channels.includes('Email'),
+        send_sms: isConfirm && detailCase.channels.includes('SMS'),
+        note: detailCase.note || null,
+      })
+      const failedNotifications = [result.email, result.sms].filter(
+        (delivery) => delivery && !delivery.success,
+      ).length
+      updateCase(detailCase.id, { status: result.status })
+      setFeedback(
+        `Hồ sơ ${detailCase.caseCode} đã chuyển sang “${result.status}”.`
+        + (failedNotifications ? ` Có ${failedNotifications} kênh thông báo gửi thất bại.` : ''),
+      )
+      await loadCases()
+    } catch (error) {
+      setFeedback(getApiErrorMessage(error, 'Không thể cập nhật hồ sơ.'))
+    } finally {
+      setActionSubmitting(false)
+    }
   }
 
   return (
@@ -341,9 +381,10 @@ export default function ProcessingCases() {
             <CaseDetailPanel
               item={detailCase}
               onClose={() => setDetailCaseId(null)}
-              onStatusChange={(status) => updateCase(detailCase.id, { status })}
+              onAction={handleDetailAction}
               onChannelChange={handleDetailChannelChange}
               onNoteChange={(note) => updateCase(detailCase.id, { note })}
+              submitting={actionSubmitting}
             />
           </div>
         </main>
@@ -356,6 +397,7 @@ export default function ProcessingCases() {
         validCount={validSelectedCases.length}
         skippedCount={skippedCount}
         channels={bulkChannels}
+        submitting={actionSubmitting}
         onCancel={() => setConfirmModalOpen(false)}
         onConfirm={handleConfirmBulkAction}
       />

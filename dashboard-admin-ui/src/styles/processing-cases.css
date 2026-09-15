@@ -880,6 +880,12 @@ input[type='checkbox'] {
   gap: 6px;
 }
 
+.detail-action-buttons button:disabled,
+.bulk-modal-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .detail-list.compact {
   padding-top: 2px;
 }

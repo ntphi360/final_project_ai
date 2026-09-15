@@ -54,15 +54,6 @@ export const officerData = [
   { name: 'Hoàng Văn F', department: 'LĐ-TBXH', processing: 12, completed: 86, risk: 3, total: 101 },
 ]
 
-export const attentionCases = [
-  { id: 'HS000124', procedure: 'Đăng ký thành lập hộ kinh doanh', officer: 'Trần Thị B', remaining: '5 giờ', remainingHours: 5, risk: 'Rất cao', status: 'Đang xử lý' },
-  { id: 'HS000129', procedure: 'Cấp đổi giấy phép lái xe', officer: 'Đỗ Văn G', remaining: '18 giờ', remainingHours: 18, risk: 'Rất cao', status: 'Đang xử lý' },
-  { id: 'HS000133', procedure: 'Cấp lại giấy phép môi trường', officer: 'Bùi Văn I', remaining: '1 ngày', remainingHours: 24, risk: 'Cao', status: 'Chờ xác nhận' },
-  { id: 'HS000125', procedure: 'Cấp phép xây dựng nhà ở riêng lẻ', officer: 'Lê Văn C', remaining: '2 ngày', remainingHours: 48, risk: 'Cao', status: 'Đang xử lý' },
-  { id: 'HS000137', procedure: 'Xác nhận tình trạng hôn nhân', officer: 'Phạm Thị D', remaining: '2 ngày', remainingHours: 55, risk: 'Trung bình', status: 'Chờ xác nhận' },
-  { id: 'HS000141', procedure: 'Đăng ký tạm trú', officer: 'Vũ Thị H', remaining: '3 ngày', remainingHours: 72, risk: 'Trung bình', status: 'Đang xử lý' },
-]
-
 export const reportFilterOptions = {
   fields: ['Đất đai', 'Hộ tịch', 'Chứng thực', 'Tư pháp', 'Giáo dục', 'Xây dựng'],
   departments: departmentData.map((item) => item.name),

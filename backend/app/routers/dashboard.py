@@ -8,14 +8,20 @@ from app.auth_dependencies import requireRoles
 from app.schemas.dashboard import (
     DashboardCaseItem,
     DashboardSummaryResponse,
+    DepartmentStatisticsResponse,
     FieldDistributionResponse,
+    MonthlyCaseTrendResponse,
+    OfficerWorkloadResponse,
     RecentCaseResponse,
     StatusDistributionResponse,
 )
 from app.services.dashboard_service import (
+    getDepartmentStatistics,
     getDashboardSummary,
     getFieldDistribution,
+    getMonthlyCaseTrends,
     getNearDeadlineCases,
+    getOfficerWorkloads,
     getOverdueCases,
     getRecentCases,
     getStatusDistribution,
@@ -52,6 +58,27 @@ def getCaseStatusDistribution(db: Session = Depends(getDb)):
 )
 def getCaseFieldDistribution(db: Session = Depends(getDb)):
     return getFieldDistribution(db=db)
+
+
+@router.get("/monthly-trends", response_model=list[MonthlyCaseTrendResponse])
+def getCaseMonthlyTrends(db: Session = Depends(getDb)):
+    return getMonthlyCaseTrends(db=db)
+
+
+@router.get(
+    "/department-statistics",
+    response_model=list[DepartmentStatisticsResponse],
+)
+def getCaseDepartmentStatistics(db: Session = Depends(getDb)):
+    return getDepartmentStatistics(db=db)
+
+
+@router.get(
+    "/officer-workloads",
+    response_model=list[OfficerWorkloadResponse],
+)
+def getCaseOfficerWorkloads(db: Session = Depends(getDb)):
+    return getOfficerWorkloads(db=db)
 
 
 @router.get("/recent-cases", response_model=list[RecentCaseResponse])

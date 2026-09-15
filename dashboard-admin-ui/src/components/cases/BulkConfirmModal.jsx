@@ -12,6 +12,7 @@ export default function BulkConfirmModal({
   validCount,
   skippedCount,
   channels,
+  submitting = false,
   onCancel,
   onConfirm,
 }) {
@@ -20,7 +21,7 @@ export default function BulkConfirmModal({
   const canSendNotifications = action === 'confirm'
 
   return (
-    <div className="bulk-modal-backdrop" role="presentation" onMouseDown={onCancel}>
+    <div className="bulk-modal-backdrop" role="presentation" onMouseDown={submitting ? undefined : onCancel}>
       <section
         className="bulk-confirm-modal"
         role="dialog"
@@ -28,7 +29,7 @@ export default function BulkConfirmModal({
         aria-labelledby="bulk-confirm-title"
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <button type="button" className="bulk-modal-close" aria-label="Đóng" onClick={onCancel}>
+        <button type="button" className="bulk-modal-close" aria-label="Đóng" disabled={submitting} onClick={onCancel}>
           <X size={19} />
         </button>
         <span className="bulk-modal-icon"><AlertCircle size={25} /></span>
@@ -40,8 +41,10 @@ export default function BulkConfirmModal({
           <div><dt>SMS</dt><dd>{canSendNotifications && channels.sms ? 'Có' : 'Không'}</dd></div>
         </dl>
         <div className="bulk-modal-actions">
-          <button type="button" className="secondary-modal-button" onClick={onCancel}>Hủy</button>
-          <button type="button" className="primary-modal-button" onClick={onConfirm}>Xác nhận</button>
+          <button type="button" className="secondary-modal-button" disabled={submitting} onClick={onCancel}>Hủy</button>
+          <button type="button" className="primary-modal-button" disabled={submitting} onClick={onConfirm}>
+            {submitting ? 'Đang xử lý...' : 'Xác nhận'}
+          </button>
         </div>
       </section>
     </div>

@@ -1,8 +1,6 @@
 import { AlertCircle, CheckCircle2, ChevronDown, Download, FileSpreadsheet, FileText, LoaderCircle, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
-import { useNavigate } from 'react-router-dom'
-import AttentionCasesTable from '../components/reports/AttentionCasesTable'
 import CaseTrendChart from '../components/reports/CaseTrendChart'
 import DepartmentStatisticsTable from '../components/reports/DepartmentStatisticsTable'
 import FieldStatisticsChart from '../components/reports/FieldStatisticsChart'
@@ -19,26 +17,15 @@ import { getApiErrorMessage } from '../services/serviceUtils'
 const emptyFilters = { from: '', to: '', field: 'all', department: 'all', officer: 'all' }
 const statusColors = ['#1677ff', '#f59e0b', '#22c55e', '#8b5cf6', '#ef4444', '#06b6d4']
 const statusDots = ['bg-blue-500', 'bg-amber-500', 'bg-green-500', 'bg-violet-500', 'bg-red-500', 'bg-cyan-500']
+const riskLevels = [
+  { level: 'VERY_HIGH', name: 'Rất cao', color: '#ef4444' },
+  { level: 'HIGH', name: 'Cao', color: '#f97316' },
+  { level: 'MEDIUM', name: 'Trung bình', color: '#eab308' },
+  { level: 'LOW', name: 'Thấp', color: '#22c55e' },
+]
 
-function remainingLabel(seconds, overdue) {
-  const absoluteSeconds = Math.abs(seconds)
-  const hours = Math.ceil(absoluteSeconds / 3600)
-  if (overdue) return `Quá hạn ${hours} giờ`
-  if (hours < 24) return `${hours} giờ`
-  return `${Math.ceil(hours / 24)} ngày`
-}
-
-function mapAttentionCase(item) {
-  const seconds = item.remaining_seconds
-  return {
-    id: item.case_code,
-    procedure: item.procedure_name,
-    officer: item.officer_name || 'Chưa phân công',
-    remaining: remainingLabel(seconds, item.is_overdue),
-    remainingHours: Math.floor(seconds / 3600),
-    risk: item.is_overdue ? 'Quá hạn' : 'Gần đến hạn',
-    status: item.status,
-  }
+function officerKey(officerId, officerName, departmentName) {
+  return `${officerId ?? officerName ?? 'unassigned'}::${departmentName}`
 }
 
 function mapReportData(data) {
@@ -58,21 +45,61 @@ function mapReportData(data) {
     dotClass: statusDots[index % statusDots.length],
   }))
   const fields = data.fields.map((item) => ({ name: item.field_name, value: item.count }))
-  const attentionMap = new Map([...data.overdue, ...data.nearDeadline].map((item) => [item.id, item]))
-  const attention = [...attentionMap.values()].map(mapAttentionCase)
-  const departments = [...new Set(data.recentCases.map((item) => item.department_name).filter(Boolean))]
-  const officers = [...new Set(data.recentCases.map((item) => item.officer_name).filter(Boolean))]
+  const riskCounts = Object.fromEntries(riskLevels.map(({ level }) => [level, 0]))
+  const departmentRiskCounts = new Map()
+  const officerRiskCounts = new Map()
+  data.processingCases.forEach((item) => {
+    if (item.riskLevel && Object.hasOwn(riskCounts, item.riskLevel)) {
+      riskCounts[item.riskLevel] += 1
+    }
+    if (item.riskLevel === 'HIGH' || item.riskLevel === 'VERY_HIGH') {
+      departmentRiskCounts.set(item.department, (departmentRiskCounts.get(item.department) || 0) + 1)
+      const key = officerKey(item.officerId, item.officer, item.department)
+      officerRiskCounts.set(key, (officerRiskCounts.get(key) || 0) + 1)
+    }
+  })
+  const riskTotal = Object.values(riskCounts).reduce((total, count) => total + count, 0)
+  const risks = riskTotal > 0
+    ? riskLevels.map((item) => ({
+        name: item.name,
+        value: riskCounts[item.level],
+        color: item.color,
+      }))
+    : []
+  const departments = data.departments.map((item) => ({
+    name: item.department_name,
+    total: item.total_cases,
+    processing: item.processing_cases,
+    completed: item.completed_cases,
+    risk: departmentRiskCounts.get(item.department_name) || 0,
+    rate: item.completion_rate,
+  }))
+  const officers = data.officers.map((item) => ({
+    id: officerKey(item.officer_id, item.officer_name, item.department_name),
+    name: item.officer_name,
+    department: item.department_name,
+    processing: item.processing_cases,
+    completed: item.completed_cases,
+    risk: officerRiskCounts.get(officerKey(item.officer_id, item.officer_name, item.department_name)) || 0,
+    total: item.total_cases,
+  }))
   return {
     summary,
     statuses,
     fields,
-    attention,
-    filterOptions: { fields: fields.map((item) => item.name), departments, officers },
+    trends: data.trends,
+    risks,
+    departments,
+    officers,
+    filterOptions: {
+      fields: fields.map((item) => item.name),
+      departments: departments.map((item) => item.name),
+      officers: [...new Set(officers.map((item) => item.name))],
+    },
   }
 }
 
 export default function Reports() {
-  const navigate = useNavigate()
   const { sidebarCollapsed } = useSelector((state) => state.ui)
   const [filters, setFilters] = useState(emptyFilters)
   const [quickFilter, setQuickFilter] = useState('30 ngày')
@@ -84,7 +111,10 @@ export default function Reports() {
     summary: [],
     statuses: [],
     fields: [],
-    attention: [],
+    trends: [],
+    risks: [],
+    departments: [],
+    officers: [],
     filterOptions: { fields: [], departments: [], officers: [] },
   })
 
@@ -146,18 +176,16 @@ export default function Reports() {
             <ReportSummaryCards data={reportData.summary} />
 
             <section className="grid items-stretch gap-3 xl:grid-cols-[1.35fr_0.9fr_0.9fr]" aria-label="Biểu đồ báo cáo chính">
-              <CaseTrendChart data={[]} />
+              <CaseTrendChart data={reportData.trends} />
               <StatusDistributionChart data={reportData.statuses} total={reportData.summary[0]?.value || 0} />
-              <RiskDistributionChart data={[]} />
+              <RiskDistributionChart data={reportData.risks} />
             </section>
 
             <section className="grid items-stretch gap-3 xl:grid-cols-[0.8fr_1.25fr_1fr]" aria-label="Thống kê chi tiết">
               <FieldStatisticsChart data={reportData.fields} />
-              <DepartmentStatisticsTable data={[]} />
-              <OfficerWorkloadTable data={[]} />
+              <DepartmentStatisticsTable data={reportData.departments} />
+              <OfficerWorkloadTable data={reportData.officers} />
             </section>
-
-            <AttentionCasesTable cases={reportData.attention} onView={(caseId) => navigate('/cases/processing', { state: { caseId } })} />
           </div>
         </main>
       </div>

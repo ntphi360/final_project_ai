@@ -26,7 +26,7 @@ const detailRows = [
   { key: 'officer', label: 'Cán bộ phụ trách', icon: UsersRound },
 ]
 
-export default function CaseDetailPanel({ item, onClose, onStatusChange, onChannelChange, onNoteChange }) {
+export default function CaseDetailPanel({ item, onClose, onAction, onChannelChange, onNoteChange, submitting = false }) {
   if (!item) return null
 
   const hasAiRisk = getRiskProgressState(item.risk).isValid
@@ -57,6 +57,8 @@ export default function CaseDetailPanel({ item, onClose, onStatusChange, onChann
             {detailRows.map(({ key, label, icon: Icon }) => (
               <div key={key}><dt><Icon size={15} /> {label}</dt><dd>{item[key]}</dd></div>
             ))}
+            <div><dt><Phone size={15} /> Số điện thoại cán bộ</dt><dd>{item.officerPhone || '—'}</dd></div>
+            <div><dt><Mail size={15} /> Email cán bộ</dt><dd className="detail-email">{item.officerEmail || '—'}</dd></div>
             <div><dt><CalendarDays size={15} /> Ngày tiếp nhận</dt><dd>{formatCaseDateTime(item.receivedAt)}</dd></div>
             <div><dt><CalendarDays size={15} /> Ngày hẹn trả</dt><dd>{formatCaseDateTime(item.deadlineAt)}</dd></div>
             <div><dt><Clock3 size={15} /> Thời hạn xử lý</dt><dd>{formatProcessingDuration(item.receivedAt, item.deadlineAt)}</dd></div>
@@ -82,29 +84,20 @@ export default function CaseDetailPanel({ item, onClose, onStatusChange, onChann
         </section>
 
         <section className="detail-block">
-          <h3><Clipboard size={16} /> Thao tác xử lý</h3>
-          <div className="detail-action-buttons">
-            <button type="button" className="detail-confirm-button" onClick={() => onStatusChange('Đã xác nhận')}>
-              <Check size={18} /> Xác nhận
-            </button>
-            <button type="button" className="detail-follow-button" onClick={() => onStatusChange('Chờ xác nhận')}>
-              <Eye size={18} /> Theo dõi thêm
-            </button>
-          </div>
+          <h3><BellRing size={16} /> Thông tin bổ sung</h3>
+          <dl className="detail-list compact">
+            <div><dt><UserRound size={15} /> Người nộp hồ sơ</dt><dd>{item.applicant}</dd></div>
+            <div><dt><Phone size={15} /> Số điện thoại người nộp</dt><dd>{item.phone}</dd></div>
+            <div><dt><Mail size={15} /> Email người nộp</dt><dd className="detail-email">{item.applicantEmail || '—'}</dd></div>
+          </dl>
         </section>
 
         <section className="detail-block">
-          <h3><BellRing size={16} /> Thông tin bổ sung</h3>
+          <h3><BellRing size={16} /> Kênh thông báo</h3>
           <div className="detail-channel-row">
-            <span><BellRing size={15} /> Phương thức gửi cảnh báo</span>
             <label><input type="checkbox" checked={item.channels.includes('Email')} onChange={() => onChannelChange('Email')} /> Email</label>
             <label><input type="checkbox" checked={item.channels.includes('SMS')} onChange={() => onChannelChange('SMS')} /> SMS</label>
           </div>
-          <dl className="detail-list compact">
-            <div><dt><UserRound size={15} /> Người nộp hồ sơ</dt><dd>{item.applicant}</dd></div>
-            <div><dt><Phone size={15} /> Số điện thoại</dt><dd>{item.phone}</dd></div>
-            <div><dt><Mail size={15} /> Email</dt><dd className="detail-email">{item.email}</dd></div>
-          </dl>
         </section>
 
         <section className="detail-note-block">
@@ -116,6 +109,28 @@ export default function CaseDetailPanel({ item, onClose, onStatusChange, onChann
             onChange={(event) => onNoteChange(event.target.value)}
           />
           <span>{item.note.length}/500</span>
+        </section>
+
+        <section className="detail-block">
+          <h3><Clipboard size={16} /> Thao tác xử lý</h3>
+          <div className="detail-action-buttons">
+            <button
+              type="button"
+              className="detail-confirm-button"
+              disabled={submitting || item.status === 'Đã xác nhận'}
+              onClick={() => onAction('CONFIRM')}
+            >
+              <Check size={18} /> {submitting ? 'Đang xử lý...' : 'Xác nhận'}
+            </button>
+            <button
+              type="button"
+              className="detail-follow-button"
+              disabled={submitting || item.status !== 'Đang xử lý'}
+              onClick={() => onAction('FOLLOW')}
+            >
+              <Eye size={18} /> Theo dõi thêm
+            </button>
+          </div>
         </section>
       </div>
     </aside>

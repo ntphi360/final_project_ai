@@ -44,3 +44,26 @@ class RecentCaseResponse(BaseModel):
 class DashboardCaseItem(RecentCaseResponse):
     remaining_seconds: int
     is_overdue: bool
+
+
+class MonthlyCaseTrendResponse(BaseModel):
+    month: str
+    received: int
+    completed: int
+
+
+class DepartmentStatisticsResponse(BaseModel):
+    department_name: str
+    total_cases: int
+    processing_cases: int
+    completed_cases: int
+    completion_rate: float
+
+
+class OfficerWorkloadResponse(BaseModel):
+    officer_id: int | None
+    officer_name: str
+    department_name: str
+    processing_cases: int
+    completed_cases: int
+    total_cases: int

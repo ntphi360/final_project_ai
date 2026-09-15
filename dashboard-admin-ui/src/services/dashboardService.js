@@ -16,6 +16,21 @@ export async function getFieldDistribution() {
   return data
 }
 
+export async function getMonthlyCaseTrends() {
+  const { data } = await api.get('/api/dashboard/monthly-trends')
+  return data
+}
+
+export async function getDepartmentStatistics() {
+  const { data } = await api.get('/api/dashboard/department-statistics')
+  return data
+}
+
+export async function getOfficerWorkloads() {
+  const { data } = await api.get('/api/dashboard/officer-workloads')
+  return data
+}
+
 export async function getRecentCases(limit = 10) {
   const { data } = await api.get('/api/dashboard/recent-cases', { params: { limit } })
   return data
@@ -45,5 +60,14 @@ export async function getDashboardData() {
 }
 
 export async function getReportDashboardData() {
-  return getDashboardData()
+  const [summary, statuses, fields, trends, departments, officers, processingCases] = await Promise.all([
+    getDashboardSummary(),
+    getStatusDistribution(),
+    getFieldDistribution(),
+    getMonthlyCaseTrends(),
+    getDepartmentStatistics(),
+    getOfficerWorkloads(),
+    getProcessingCases(),
+  ])
+  return { summary, statuses, fields, trends, departments, officers, processingCases }
 }

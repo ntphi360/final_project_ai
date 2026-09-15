@@ -58,6 +58,103 @@ def getFieldDistribution(db: Session) -> list[dict[str, str | int]]:
     return [dict(row) for row in db.execute(statement).mappings()]
 
 
+def getMonthlyCaseTrends(db: Session) -> list[dict[str, str | int]]:
+    receivedCount = func.count(Case.id)
+    receivedStatement = (
+        select(
+            func.year(Case.received_at).label("year"),
+            func.month(Case.received_at).label("month"),
+            receivedCount.label("count"),
+        )
+        .group_by(func.year(Case.received_at), func.month(Case.received_at))
+    )
+    completedCount = func.count(Case.id)
+    completedStatement = (
+        select(
+            func.year(Case.completed_at).label("year"),
+            func.month(Case.completed_at).label("month"),
+            completedCount.label("count"),
+        )
+        .where(Case.completed_at.is_not(None))
+        .group_by(func.year(Case.completed_at), func.month(Case.completed_at))
+    )
+
+    monthlyCounts: dict[tuple[int, int], dict[str, int]] = {}
+    for row in db.execute(receivedStatement).mappings():
+        key = (int(row["year"]), int(row["month"]))
+        monthlyCounts[key] = {"received": int(row["count"]), "completed": 0}
+    for row in db.execute(completedStatement).mappings():
+        key = (int(row["year"]), int(row["month"]))
+        monthlyCounts.setdefault(key, {"received": 0, "completed": 0})
+        monthlyCounts[key]["completed"] = int(row["count"])
+
+    return [
+        {
+            "month": f"{month:02d}/{year}",
+            "received": counts["received"],
+            "completed": counts["completed"],
+        }
+        for (year, month), counts in sorted(monthlyCounts.items())
+    ]
+
+
+def getDepartmentStatistics(db: Session) -> list[dict[str, object]]:
+    processingCondition = Case.completed_at.is_(None)
+    completedCondition = Case.completed_at.is_not(None)
+    totalCount = func.count(Case.id)
+    statement = (
+        select(
+            Case.department_name.label("department_name"),
+            totalCount.label("total_cases"),
+            func.count(case((processingCondition, 1))).label("processing_cases"),
+            func.count(case((completedCondition, 1))).label("completed_cases"),
+        )
+        .group_by(Case.department_name)
+        .order_by(totalCount.desc(), Case.department_name)
+    )
+
+    results = []
+    for row in db.execute(statement).mappings():
+        totalCases = int(row["total_cases"])
+        completedCases = int(row["completed_cases"])
+        results.append(
+            {
+                **dict(row),
+                "completion_rate": (
+                    round(completedCases / totalCases * 100.0, 2)
+                    if totalCases > 0
+                    else 0.0
+                ),
+            }
+        )
+    return results
+
+
+def getOfficerWorkloads(db: Session) -> list[dict[str, object]]:
+    processingCondition = Case.completed_at.is_(None)
+    completedCondition = Case.completed_at.is_not(None)
+    totalCount = func.count(Case.id)
+    statement = (
+        select(
+            Case.officer_id.label("officer_id"),
+            Case.officer_name.label("officer_name"),
+            Case.department_name.label("department_name"),
+            func.count(case((processingCondition, 1))).label("processing_cases"),
+            func.count(case((completedCondition, 1))).label("completed_cases"),
+            totalCount.label("total_cases"),
+        )
+        .group_by(Case.officer_id, Case.officer_name, Case.department_name)
+        .order_by(totalCount.desc(), Case.officer_name, Case.department_name)
+    )
+    return [
+        {
+            **dict(row),
+            "officer_name": row["officer_name"] or "Chưa phân công",
+        }
+        for row in db.execute(statement).mappings()
+    ]
+
+
 def getRecentCases(db: Session, limit: int = 10) -> list[Case]:
     statement = (
         select(Case)

@@ -10,7 +10,10 @@ from app.schemas.case import (
 from app.schemas.dashboard import (
     DashboardCaseItem,
     DashboardSummaryResponse,
+    DepartmentStatisticsResponse,
     FieldDistributionResponse,
+    MonthlyCaseTrendResponse,
+    OfficerWorkloadResponse,
     RecentCaseResponse,
     StatusDistributionResponse,
 )
@@ -49,6 +52,9 @@ __all__ = [
     "OfficerWithFieldsResponse",
     "OfficerFieldAssignmentResponse",
     "DashboardSummaryResponse",
+    "MonthlyCaseTrendResponse",
+    "DepartmentStatisticsResponse",
+    "OfficerWorkloadResponse",
     "StatusDistributionResponse",
     "FieldDistributionResponse",
     "RecentCaseResponse",

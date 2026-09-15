@@ -11,12 +11,22 @@ from app.ai.predictor import predictCase
 from app.database.database import getDb
 from app.auth_dependencies import requireRoles
 from app.schemas.case import (
+    CaseActionRequest,
+    CaseActionResponse,
+    CaseBulkActionRequest,
+    CaseBulkActionResponse,
     CaseDetailResponse,
     CaseResponse,
     ProcessingCaseResponse,
 )
 from app.services.ai_service import buildCaseDataForPrediction
 from app.services.ai_risk import calculateCaseRisk
+from app.services.case_action_service import (
+    CaseActionNotFoundError,
+    CaseActionStateError,
+    applyCaseAction,
+    applyCaseBulkAction,
+)
 from app.services.case_service import (
     getCaseById,
     getCases,
@@ -35,6 +45,7 @@ router = APIRouter(
 
 PaginationSkip = Annotated[int, Query(ge=0)]
 PaginationLimit = Annotated[int, Query(ge=1, le=100)]
+caseActors = requireRoles("ADMIN", "SUPERVISOR", "OFFICER")
 
 
 @router.get("", response_model=list[CaseResponse])
@@ -98,7 +109,21 @@ def listProcessingCases(
         )
         responses.append(
             ProcessingCaseResponse(
-                **response.model_dump(),
+                **(
+                    response.model_dump()
+                    | {
+                        "officer_phone_number": (
+                            caseRecord.officer.user.phone_number
+                            if caseRecord.officer and caseRecord.officer.user
+                            else None
+                        ),
+                        "officer_email": (
+                            caseRecord.officer.user.email
+                            if caseRecord.officer and caseRecord.officer.user
+                            else None
+                        ),
+                    }
+                ),
                 predicted_processing_hours=predictionHours,
                 model_version=modelVersion,
                 **riskMetrics,
@@ -117,6 +142,42 @@ def listCompletedCases(
     return getCompletedCases(db=db, skip=skip, limit=limit)
 
 
+@router.post(
+    "/bulk-action",
+    response_model=CaseBulkActionResponse,
+    dependencies=[Depends(caseActors)],
+)
+async def updateCaseBatch(
+    data: CaseBulkActionRequest,
+    db: Session = Depends(getDb),
+) -> CaseBulkActionResponse:
+    return await applyCaseBulkAction(db=db, data=data)
+
+
+@router.post(
+    "/{case_id}/action",
+    response_model=CaseActionResponse,
+    dependencies=[Depends(caseActors)],
+)
+async def updateCaseAction(
+    case_id: int,
+    data: CaseActionRequest,
+    db: Session = Depends(getDb),
+) -> CaseActionResponse:
+    try:
+        return await applyCaseAction(db=db, caseId=case_id, data=data)
+    except CaseActionNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy hồ sơ",
+        ) from exc
+    except CaseActionStateError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+
+
 @router.get("/{case_id}", response_model=CaseDetailResponse)
 def getCaseDetail(case_id: int, db: Session = Depends(getDb)):
     case = getCaseById(db=db, caseId=case_id)
@@ -125,4 +186,16 @@ def getCaseDetail(case_id: int, db: Session = Depends(getDb)):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Không tìm thấy hồ sơ",
         )
-    return case
+    response = CaseDetailResponse.model_validate(case)
+    return response.model_copy(
+        update={
+            "officer_phone_number": (
+                case.officer.user.phone_number
+                if case.officer and case.officer.user
+                else None
+            ),
+            "officer_email": (
+                case.officer.user.email if case.officer and case.officer.user else None
+            ),
+        }
+    )

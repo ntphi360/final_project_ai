@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class CaseProcedureResponse(BaseModel):
@@ -39,6 +39,8 @@ class CaseResponse(BaseModel):
     applicant_name: str | None
     phone_number: str | None
     officer_name: str | None
+    officer_phone_number: str | None = None
+    officer_email: str | None = None
     received_at: datetime
     deadline_at: datetime
     completed_at: datetime | None
@@ -68,3 +70,41 @@ class CaseDetailResponse(CaseResponse):
     officer: CaseOfficerResponse | None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class CaseActionRequest(BaseModel):
+    action: Literal["CONFIRM", "FOLLOW"]
+    send_email: bool = False
+    send_sms: bool = False
+    note: str | None = Field(default=None, max_length=500)
+
+
+class CaseBulkActionRequest(CaseActionRequest):
+    case_ids: list[int] = Field(min_length=1)
+
+
+class CaseNotificationDeliveryResponse(BaseModel):
+    success: bool
+    provider: str
+    recipient: str | None = None
+    message_id: str | None = None
+    error: str | None = None
+
+
+class CaseActionResponse(BaseModel):
+    case_id: int
+    case_code: str | None = None
+    status: str | None = None
+    success: bool
+    skipped: bool = False
+    reason: str | None = None
+    note: str | None = None
+    email: CaseNotificationDeliveryResponse | None = None
+    sms: CaseNotificationDeliveryResponse | None = None
+
+
+class CaseBulkActionResponse(BaseModel):
+    success_count: int
+    skipped_count: int
+    failed_notification_count: int
+    results: list[CaseActionResponse]

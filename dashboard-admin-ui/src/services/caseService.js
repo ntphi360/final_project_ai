@@ -17,13 +17,16 @@ export function mapCase(item) {
     departmentId: item.department_id ?? null,
     officer: item.officer_name ?? 'Chưa phân công',
     officerId: item.officer_id ?? null,
+    officerPhone: item.officer_phone_number ?? null,
+    officerEmail: item.officer_email ?? null,
     receivedAt: item.received_at,
     deadlineAt: item.deadline_at,
     completedAt: item.completed_at ?? null,
     status: item.status,
     applicant: item.applicant_name ?? '—',
     phone: item.phone_number ?? '—',
-    email: '',
+    applicantEmail: item.applicant_email ?? null,
+    email: item.applicant_email ?? '—',
     agency: item.agency_name ?? '',
     procedureRelation: item.procedure ?? null,
     departmentRelation: item.department ?? null,
@@ -75,4 +78,14 @@ export function getCompletedCases() {
 export async function getCaseById(id) {
   const { data } = await api.get(`/api/cases/${id}`)
   return mapCase(data)
+}
+
+export async function performCaseAction(id, payload) {
+  const { data } = await api.post(`/api/cases/${id}/action`, payload, { timeout: 60000 })
+  return data
+}
+
+export async function performCaseBulkAction(payload) {
+  const { data } = await api.post('/api/cases/bulk-action', payload, { timeout: 300000 })
+  return data
 }
