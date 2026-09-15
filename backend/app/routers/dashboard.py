@@ -1,6 +1,7 @@
-from typing import Annotated
+from datetime import date
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.database.database import getDb
@@ -10,22 +11,23 @@ from app.schemas.dashboard import (
     DashboardSummaryResponse,
     DepartmentStatisticsResponse,
     FieldDistributionResponse,
-    MonthlyCaseTrendResponse,
+    CaseTrendResponse,
     OfficerWorkloadResponse,
     RecentCaseResponse,
     StatusDistributionResponse,
 )
 from app.services.dashboard_service import (
+    getCaseTrends,
     getDepartmentStatistics,
     getDashboardSummary,
     getFieldDistribution,
-    getMonthlyCaseTrends,
     getNearDeadlineCases,
     getOfficerWorkloads,
     getOverdueCases,
     getRecentCases,
     getStatusDistribution,
 )
+from app.services.case_filter_service import CaseQueryFilters
 
 
 router = APIRouter(
@@ -37,48 +39,89 @@ router = APIRouter(
 DashboardSkip = Annotated[int, Query(ge=0)]
 DashboardLimit = Annotated[int, Query(ge=1, le=100)]
 NearDeadlineHours = Annotated[int, Query(ge=1)]
+ReportGranularity = Annotated[Literal["day", "month", "year"], Query()]
+
+
+def getReportFilters(
+    date_from: Annotated[date | None, Query()] = None,
+    date_to: Annotated[date | None, Query()] = None,
+    field_name: Annotated[str | None, Query(min_length=1)] = None,
+    department_name: Annotated[str | None, Query(min_length=1)] = None,
+    officer_id: Annotated[int | None, Query(ge=1)] = None,
+) -> CaseQueryFilters:
+    if date_from is not None and date_to is not None and date_from > date_to:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Từ ngày không được lớn hơn đến ngày",
+        )
+    return CaseQueryFilters(
+        date_from=date_from,
+        date_to=date_to,
+        field_name=field_name,
+        department_name=department_name,
+        officer_id=officer_id,
+    )
 
 
 @router.get("/summary", response_model=DashboardSummaryResponse)
-def getSummary(db: Session = Depends(getDb)):
-    return getDashboardSummary(db=db)
+def getSummary(
+    db: Session = Depends(getDb),
+    filters: CaseQueryFilters = Depends(getReportFilters),
+):
+    return getDashboardSummary(db=db, filters=filters)
 
 
 @router.get(
     "/status-distribution",
     response_model=list[StatusDistributionResponse],
 )
-def getCaseStatusDistribution(db: Session = Depends(getDb)):
-    return getStatusDistribution(db=db)
+def getCaseStatusDistribution(
+    db: Session = Depends(getDb),
+    filters: CaseQueryFilters = Depends(getReportFilters),
+):
+    return getStatusDistribution(db=db, filters=filters)
 
 
 @router.get(
     "/field-distribution",
     response_model=list[FieldDistributionResponse],
 )
-def getCaseFieldDistribution(db: Session = Depends(getDb)):
-    return getFieldDistribution(db=db)
+def getCaseFieldDistribution(
+    db: Session = Depends(getDb),
+    filters: CaseQueryFilters = Depends(getReportFilters),
+):
+    return getFieldDistribution(db=db, filters=filters)
 
 
-@router.get("/monthly-trends", response_model=list[MonthlyCaseTrendResponse])
-def getCaseMonthlyTrends(db: Session = Depends(getDb)):
-    return getMonthlyCaseTrends(db=db)
+@router.get("/monthly-trends", response_model=list[CaseTrendResponse])
+def getCaseMonthlyTrends(
+    db: Session = Depends(getDb),
+    granularity: ReportGranularity = "month",
+    filters: CaseQueryFilters = Depends(getReportFilters),
+):
+    return getCaseTrends(db=db, granularity=granularity, filters=filters)
 
 
 @router.get(
     "/department-statistics",
     response_model=list[DepartmentStatisticsResponse],
 )
-def getCaseDepartmentStatistics(db: Session = Depends(getDb)):
-    return getDepartmentStatistics(db=db)
+def getCaseDepartmentStatistics(
+    db: Session = Depends(getDb),
+    filters: CaseQueryFilters = Depends(getReportFilters),
+):
+    return getDepartmentStatistics(db=db, filters=filters)
 
 
 @router.get(
     "/officer-workloads",
     response_model=list[OfficerWorkloadResponse],
 )
-def getCaseOfficerWorkloads(db: Session = Depends(getDb)):
-    return getOfficerWorkloads(db=db)
+def getCaseOfficerWorkloads(
+    db: Session = Depends(getDb),
+    filters: CaseQueryFilters = Depends(getReportFilters),
+):
+    return getOfficerWorkloads(db=db, filters=filters)
 
 
 @router.get("/recent-cases", response_model=list[RecentCaseResponse])

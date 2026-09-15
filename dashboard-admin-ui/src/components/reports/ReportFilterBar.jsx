@@ -8,7 +8,11 @@ function SelectFilter({ label, value, options, onChange }) {
       <span className="mb-1 block text-xs font-medium text-slate-600">{label}</span>
       <select value={value} className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" onChange={(event) => onChange(event.target.value)}>
         <option value="all">Tất cả</option>
-        {options.map((option) => <option value={option} key={option}>{option}</option>)}
+        {options.map((option) => {
+          const optionValue = typeof option === 'object' ? option.value : option
+          const optionLabel = typeof option === 'object' ? option.label : option
+          return <option value={optionValue} key={optionValue}>{optionLabel}</option>
+        })}
       </select>
     </label>
   )

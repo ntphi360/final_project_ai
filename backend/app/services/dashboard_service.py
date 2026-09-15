@@ -5,9 +5,13 @@ from sqlalchemy import and_, case, func, select
 from sqlalchemy.orm import Session
 
 from app.models.case import Case
+from app.services.case_filter_service import CaseQueryFilters, applyCaseFilters
 
 
-def getDashboardSummary(db: Session) -> dict[str, int]:
+def getDashboardSummary(
+    db: Session,
+    filters: CaseQueryFilters | None = None,
+) -> dict[str, int]:
     currentDateTime = datetime.now()
     processingCondition = Case.completed_at.is_(None)
     completedCondition = Case.completed_at.is_not(None)
@@ -28,11 +32,14 @@ def getDashboardSummary(db: Session) -> dict[str, int]:
             case((overdueCondition, 1))
         ).label("overdue_cases"),
     )
-    result = db.execute(statement).mappings().one()
+    result = db.execute(applyCaseFilters(statement, filters)).mappings().one()
     return dict(result)
 
 
-def getStatusDistribution(db: Session) -> list[dict[str, str | int]]:
+def getStatusDistribution(
+    db: Session,
+    filters: CaseQueryFilters | None = None,
+) -> list[dict[str, str | int]]:
     caseCount = func.count(Case.id)
     statement = (
         select(
@@ -42,10 +49,14 @@ def getStatusDistribution(db: Session) -> list[dict[str, str | int]]:
         .group_by(Case.status)
         .order_by(caseCount.desc(), Case.status)
     )
+    statement = applyCaseFilters(statement, filters)
     return [dict(row) for row in db.execute(statement).mappings()]
 
 
-def getFieldDistribution(db: Session) -> list[dict[str, str | int]]:
+def getFieldDistribution(
+    db: Session,
+    filters: CaseQueryFilters | None = None,
+) -> list[dict[str, str | int]]:
     caseCount = func.count(Case.id)
     statement = (
         select(
@@ -55,50 +66,46 @@ def getFieldDistribution(db: Session) -> list[dict[str, str | int]]:
         .group_by(Case.field_name)
         .order_by(caseCount.desc(), Case.field_name)
     )
+    statement = applyCaseFilters(statement, filters)
     return [dict(row) for row in db.execute(statement).mappings()]
 
 
-def getMonthlyCaseTrends(db: Session) -> list[dict[str, str | int]]:
-    receivedCount = func.count(Case.id)
-    receivedStatement = (
-        select(
-            func.year(Case.received_at).label("year"),
-            func.month(Case.received_at).label("month"),
-            receivedCount.label("count"),
-        )
-        .group_by(func.year(Case.received_at), func.month(Case.received_at))
+def getCaseTrends(
+    db: Session,
+    granularity: str = "month",
+    filters: CaseQueryFilters | None = None,
+) -> list[dict[str, str | int]]:
+    receivedStatement = applyCaseFilters(
+        select(Case.received_at),
+        filters,
+        dateColumn=Case.received_at,
     )
-    completedCount = func.count(Case.id)
-    completedStatement = (
-        select(
-            func.year(Case.completed_at).label("year"),
-            func.month(Case.completed_at).label("month"),
-            completedCount.label("count"),
-        )
-        .where(Case.completed_at.is_not(None))
-        .group_by(func.year(Case.completed_at), func.month(Case.completed_at))
+    completedStatement = applyCaseFilters(
+        select(Case.completed_at).where(Case.completed_at.is_not(None)),
+        filters,
+        dateColumn=Case.completed_at,
     )
 
-    monthlyCounts: dict[tuple[int, int], dict[str, int]] = {}
-    for row in db.execute(receivedStatement).mappings():
-        key = (int(row["year"]), int(row["month"]))
-        monthlyCounts[key] = {"received": int(row["count"]), "completed": 0}
-    for row in db.execute(completedStatement).mappings():
-        key = (int(row["year"]), int(row["month"]))
-        monthlyCounts.setdefault(key, {"received": 0, "completed": 0})
-        monthlyCounts[key]["completed"] = int(row["count"])
+    periodCounts: dict[str, dict[str, int]] = {}
+    for receivedAt in db.scalars(receivedStatement):
+        period = _formatTrendPeriod(receivedAt, granularity)
+        periodCounts.setdefault(period, {"received": 0, "completed": 0})
+        periodCounts[period]["received"] += 1
+    for completedAt in db.scalars(completedStatement):
+        period = _formatTrendPeriod(completedAt, granularity)
+        periodCounts.setdefault(period, {"received": 0, "completed": 0})
+        periodCounts[period]["completed"] += 1
 
     return [
-        {
-            "month": f"{month:02d}/{year}",
-            "received": counts["received"],
-            "completed": counts["completed"],
-        }
-        for (year, month), counts in sorted(monthlyCounts.items())
+        {"period": period, **counts}
+        for period, counts in sorted(periodCounts.items())
     ]
 
 
-def getDepartmentStatistics(db: Session) -> list[dict[str, object]]:
+def getDepartmentStatistics(
+    db: Session,
+    filters: CaseQueryFilters | None = None,
+) -> list[dict[str, object]]:
     processingCondition = Case.completed_at.is_(None)
     completedCondition = Case.completed_at.is_not(None)
     totalCount = func.count(Case.id)
@@ -113,6 +120,7 @@ def getDepartmentStatistics(db: Session) -> list[dict[str, object]]:
         .order_by(totalCount.desc(), Case.department_name)
     )
 
+    statement = applyCaseFilters(statement, filters)
     results = []
     for row in db.execute(statement).mappings():
         totalCases = int(row["total_cases"])
@@ -130,7 +138,10 @@ def getDepartmentStatistics(db: Session) -> list[dict[str, object]]:
     return results
 
 
-def getOfficerWorkloads(db: Session) -> list[dict[str, object]]:
+def getOfficerWorkloads(
+    db: Session,
+    filters: CaseQueryFilters | None = None,
+) -> list[dict[str, object]]:
     processingCondition = Case.completed_at.is_(None)
     completedCondition = Case.completed_at.is_not(None)
     totalCount = func.count(Case.id)
@@ -146,6 +157,7 @@ def getOfficerWorkloads(db: Session) -> list[dict[str, object]]:
         .group_by(Case.officer_id, Case.officer_name, Case.department_name)
         .order_by(totalCount.desc(), Case.officer_name, Case.department_name)
     )
+    statement = applyCaseFilters(statement, filters)
     return [
         {
             **dict(row),
@@ -153,6 +165,14 @@ def getOfficerWorkloads(db: Session) -> list[dict[str, object]]:
         }
         for row in db.execute(statement).mappings()
     ]
+
+
+def _formatTrendPeriod(value: datetime, granularity: str) -> str:
+    if granularity == "day":
+        return value.strftime("%Y-%m-%d")
+    if granularity == "year":
+        return value.strftime("%Y")
+    return value.strftime("%Y-%m")
 
 
 def getRecentCases(db: Session, limit: int = 10) -> list[Case]:

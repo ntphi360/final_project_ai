@@ -46,13 +46,13 @@ export function mapCase(item) {
   }
 }
 
-async function getAllPages(path) {
+async function getAllPages(path, params = {}) {
   const pageSize = 100
   const items = []
   let skip = 0
 
   while (true) {
-    const { data } = await api.get(path, { params: { skip, limit: pageSize } })
+    const { data } = await api.get(path, { params: { ...params, skip, limit: pageSize } })
     if (!Array.isArray(data)) throw new TypeError(`Response của ${path} phải là một mảng`)
     items.push(...data)
     if (data.length < pageSize) break
@@ -61,8 +61,8 @@ async function getAllPages(path) {
   return items.map(mapCase)
 }
 
-export function getProcessingCases() {
-  return getAllPages('/api/cases/processing')
+export function getProcessingCases(params = {}) {
+  return getAllPages('/api/cases/processing', params)
 }
 
 export const getAllProcessingCases = getProcessingCases

@@ -13,10 +13,10 @@ from app.services.catalog_service import (
     getProceduresByField,
 )
 from app.services.dashboard_service import (
+    getCaseTrends,
     getDepartmentStatistics,
     getDashboardSummary,
     getFieldDistribution,
-    getMonthlyCaseTrends,
     getNearDeadlineCases,
     getOfficerWorkloads,
     getOverdueCases,
@@ -73,7 +73,7 @@ __all__ = [
     "assignOfficerToField",
     "removeOfficerFromField",
     "getDashboardSummary",
-    "getMonthlyCaseTrends",
+    "getCaseTrends",
     "getDepartmentStatistics",
     "getOfficerWorkloads",
     "getStatusDistribution",

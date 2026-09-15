@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -27,6 +27,7 @@ from app.services.case_action_service import (
     applyCaseAction,
     applyCaseBulkAction,
 )
+from app.services.case_filter_service import CaseQueryFilters
 from app.services.case_service import (
     getCaseById,
     getCases,
@@ -62,8 +63,25 @@ def listProcessingCases(
     db: Session = Depends(getDb),
     skip: PaginationSkip = 0,
     limit: PaginationLimit = 20,
+    date_from: Annotated[date | None, Query()] = None,
+    date_to: Annotated[date | None, Query()] = None,
+    field_name: Annotated[str | None, Query(min_length=1)] = None,
+    department_name: Annotated[str | None, Query(min_length=1)] = None,
+    officer_id: Annotated[int | None, Query(ge=1)] = None,
 ) -> list[ProcessingCaseResponse]:
-    cases = getProcessingCases(db=db, skip=skip, limit=limit)
+    if date_from is not None and date_to is not None and date_from > date_to:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Từ ngày không được lớn hơn đến ngày",
+        )
+    filters = CaseQueryFilters(
+        date_from=date_from,
+        date_to=date_to,
+        field_name=field_name,
+        department_name=department_name,
+        officer_id=officer_id,
+    )
+    cases = getProcessingCases(db=db, skip=skip, limit=limit, filters=filters)
     responses: list[ProcessingCaseResponse] = []
     artifactAvailable = True
     currentTime = datetime.now()

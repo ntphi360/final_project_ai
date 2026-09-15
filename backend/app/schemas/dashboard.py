@@ -46,8 +46,8 @@ class DashboardCaseItem(RecentCaseResponse):
     is_overdue: bool
 
 
-class MonthlyCaseTrendResponse(BaseModel):
-    month: str
+class CaseTrendResponse(BaseModel):
+    period: str
     received: int
     completed: int
 

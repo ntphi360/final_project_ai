@@ -23,6 +23,44 @@ const riskLevels = [
   { level: 'MEDIUM', name: 'Trung bình', color: '#eab308' },
   { level: 'LOW', name: 'Thấp', color: '#22c55e' },
 ]
+const emptyReportData = {
+  summary: [],
+  statuses: [],
+  fields: [],
+  trends: [],
+  risks: [],
+  departments: [],
+  officers: [],
+  filterOptions: { fields: [], departments: [], officers: [] },
+}
+
+function formatInputDate(value) {
+  const year = value.getFullYear()
+  const month = String(value.getMonth() + 1).padStart(2, '0')
+  const day = String(value.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function getQuickDateRange(value) {
+  const to = new Date()
+  const from = new Date(to)
+  if (value === '7 ngày') from.setDate(from.getDate() - 6)
+  if (value === '30 ngày') from.setDate(from.getDate() - 29)
+  if (value === '3 tháng') from.setMonth(from.getMonth() - 3)
+  if (value === '6 tháng') from.setMonth(from.getMonth() - 6)
+  if (value === 'Năm nay') from.setMonth(0, 1)
+  return { from: formatInputDate(from), to: formatInputDate(to) }
+}
+
+function buildReportParams(filters) {
+  return {
+    ...(filters.from && { date_from: filters.from }),
+    ...(filters.to && { date_to: filters.to }),
+    ...(filters.field !== 'all' && { field_name: filters.field }),
+    ...(filters.department !== 'all' && { department_name: filters.department }),
+    ...(filters.officer !== 'all' && { officer_id: Number(filters.officer) }),
+  }
+}
 
 function officerKey(officerId, officerName, departmentName) {
   return `${officerId ?? officerName ?? 'unassigned'}::${departmentName}`
@@ -76,6 +114,7 @@ function mapReportData(data) {
   }))
   const officers = data.officers.map((item) => ({
     id: officerKey(item.officer_id, item.officer_name, item.department_name),
+    officerId: item.officer_id,
     name: item.officer_name,
     department: item.department_name,
     processing: item.processing_cases,
@@ -94,7 +133,11 @@ function mapReportData(data) {
     filterOptions: {
       fields: fields.map((item) => item.name),
       departments: departments.map((item) => item.name),
-      officers: [...new Set(officers.map((item) => item.name))],
+      officers: [...new Map(
+        officers
+          .filter((item) => item.officerId != null)
+          .map((item) => [item.officerId, { value: String(item.officerId), label: item.name }]),
+      ).values()],
     },
   }
 }
@@ -102,33 +145,39 @@ function mapReportData(data) {
 export default function Reports() {
   const { sidebarCollapsed } = useSelector((state) => state.ui)
   const [filters, setFilters] = useState(emptyFilters)
-  const [quickFilter, setQuickFilter] = useState('30 ngày')
+  const [appliedFilters, setAppliedFilters] = useState(emptyFilters)
+  const [quickFilter, setQuickFilter] = useState('')
+  const [granularity, setGranularity] = useState('month')
+  const [reloadVersion, setReloadVersion] = useState(0)
   const [exportOpen, setExportOpen] = useState(false)
   const [toast, setToast] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [reportData, setReportData] = useState({
-    summary: [],
-    statuses: [],
-    fields: [],
-    trends: [],
-    risks: [],
-    departments: [],
-    officers: [],
-    filterOptions: { fields: [], departments: [], officers: [] },
-  })
+  const [reportData, setReportData] = useState(emptyReportData)
 
   const loadReport = useCallback(async () => {
     setLoading(true)
     setError('')
+    setReportData((current) => ({
+      ...emptyReportData,
+      filterOptions: current.filterOptions,
+    }))
     try {
-      setReportData(mapReportData(await getReportDashboardData()))
+      const mapped = mapReportData(
+        await getReportDashboardData(buildReportParams(appliedFilters), granularity),
+      )
+      setReportData((current) => ({
+        ...mapped,
+        filterOptions: current.filterOptions.fields.length > 0
+          ? current.filterOptions
+          : mapped.filterOptions,
+      }))
     } catch (requestError) {
       setError(getApiErrorMessage(requestError, 'Không thể tải dữ liệu báo cáo. Vui lòng thử lại.'))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [appliedFilters, granularity, reloadVersion])
 
   useEffect(() => {
     loadReport()
@@ -145,6 +194,30 @@ export default function Reports() {
     setExportOpen(false)
   }
 
+  const applyFilters = () => {
+    if (filters.from && filters.to && filters.from > filters.to) {
+      setError('Từ ngày không được lớn hơn đến ngày.')
+      return
+    }
+    setAppliedFilters({ ...filters })
+    setReloadVersion((version) => version + 1)
+  }
+
+  const applyQuickFilter = (value) => {
+    const range = getQuickDateRange(value)
+    setQuickFilter(value)
+    setFilters((current) => ({ ...current, ...range }))
+    setAppliedFilters((current) => ({ ...current, ...range }))
+  }
+
+  const resetFilters = () => {
+    setFilters(emptyFilters)
+    setAppliedFilters(emptyFilters)
+    setQuickFilter('')
+    setGranularity('month')
+    setReloadVersion((version) => version + 1)
+  }
+
   return (
     <div className={`app-shell processing-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       <Sidebar />
@@ -154,7 +227,7 @@ export default function Reports() {
           <header className="mb-4 flex items-start justify-between gap-4">
             <div><h1 className="text-2xl font-bold tracking-tight text-slate-950 lg:text-[29px]">Báo cáo thống kê</h1><p className="mt-1 text-sm text-slate-500">Tổng hợp và theo dõi tình hình xử lý hồ sơ.</p></div>
             <div className="relative shrink-0">
-              <button type="button" aria-expanded={exportOpen} className="flex h-10 items-center gap-2 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-blue-700" onClick={() => setExportOpen((open) => !open)}><Download size={17} /> Xuất báo cáo <ChevronDown size={15} /></button>
+              {/*<button type="button" aria-expanded={exportOpen} className="flex h-10 items-center gap-2 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-blue-700" onClick={() => setExportOpen((open) => !open)}><Download size={17} /> Xuất báo cáo <ChevronDown size={15} /></button>*/}
               {exportOpen && <div className="absolute right-0 top-12 z-30 w-44 rounded-lg border border-slate-200 bg-white p-1.5 shadow-xl"><button type="button" className="flex h-9 w-full items-center gap-2 rounded-md px-3 text-left text-sm text-slate-700 hover:bg-slate-50" onClick={() => showPendingFeature('Backend chưa có API xuất Excel.')}><FileSpreadsheet size={16} className="text-emerald-600" /> Xuất Excel</button><button type="button" className="flex h-9 w-full items-center gap-2 rounded-md px-3 text-left text-sm text-slate-700 hover:bg-slate-50" onClick={() => showPendingFeature('Backend chưa có API xuất PDF.')}><FileText size={16} className="text-red-500" /> Xuất PDF</button></div>}
             </div>
           </header>
@@ -168,15 +241,15 @@ export default function Reports() {
               options={reportData.filterOptions}
               quickFilter={quickFilter}
               onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
-              onQuickFilter={(value) => { setQuickFilter(value); setToast(`Đã chọn khoảng thời gian: ${value}. Backend hiện chưa hỗ trợ lọc dashboard theo thời gian.`) }}
-              onApply={() => setToast('Backend dashboard hiện chưa hỗ trợ các tham số lọc báo cáo.')}
-              onReset={() => { setFilters(emptyFilters); setQuickFilter('30 ngày'); setToast('Đã đặt lại bộ lọc.') }}
+              onQuickFilter={applyQuickFilter}
+              onApply={applyFilters}
+              onReset={resetFilters}
             />
 
             <ReportSummaryCards data={reportData.summary} />
 
             <section className="grid items-stretch gap-3 xl:grid-cols-[1.35fr_0.9fr_0.9fr]" aria-label="Biểu đồ báo cáo chính">
-              <CaseTrendChart data={reportData.trends} />
+              <CaseTrendChart data={reportData.trends} granularity={granularity} onGranularityChange={setGranularity} />
               <StatusDistributionChart data={reportData.statuses} total={reportData.summary[0]?.value || 0} />
               <RiskDistributionChart data={reportData.risks} />
             </section>
