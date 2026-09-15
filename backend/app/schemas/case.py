@@ -45,6 +45,7 @@ class CaseResponse(BaseModel):
     deadline_at: datetime
     completed_at: datetime | None
     status: str
+    is_following: bool = False
     created_at: datetime
     updated_at: datetime
 
@@ -95,6 +96,7 @@ class CaseActionResponse(BaseModel):
     case_id: int
     case_code: str | None = None
     status: str | None = None
+    is_following: bool = False
     success: bool
     skipped: bool = False
     reason: str | None = None

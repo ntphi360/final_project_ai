@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Unicode
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Unicode
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
@@ -106,6 +106,12 @@ class Case(Base):
 
     status: Mapped[str] = mapped_column(
         Unicode(100),
+        nullable=False,
+    )
+
+    is_following: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
         nullable=False,
     )
 

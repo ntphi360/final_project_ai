@@ -23,6 +23,7 @@ export function mapCase(item) {
     deadlineAt: item.deadline_at,
     completedAt: item.completed_at ?? null,
     status: item.status,
+    isFollowing: Boolean(item.is_following),
     applicant: item.applicant_name ?? '—',
     phone: item.phone_number ?? '—',
     applicantEmail: item.applicant_email ?? null,

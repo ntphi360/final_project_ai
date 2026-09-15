@@ -12,6 +12,7 @@ import {
   Mail,
   MapPin,
   Phone,
+  Star,
   UserRound,
   UsersRound,
   X,
@@ -44,6 +45,7 @@ export default function CaseDetailPanel({ item, onClose, onAction, onChannelChan
             <span>{item.procedure}</span>
           </div>
           <button type="button" className="copy-case-code" aria-label="Sao chép mã hồ sơ"><Copy size={16} /></button>
+          {item.isFollowing && <span className="following-badge" title="Đang theo dõi"><Star size={13} fill="currentColor" /> Đang theo dõi</span>}
         </section>
 
         <section className="detail-block">

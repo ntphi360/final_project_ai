@@ -55,6 +55,7 @@ async def applyCaseAction(
     )
 
     caseRecord.status = CONFIRMED_STATUS if isConfirm else FOLLOWING_STATUS
+    caseRecord.is_following = not isConfirm
     try:
         db.add(caseRecord)
         db.commit()
@@ -82,6 +83,7 @@ async def applyCaseAction(
         case_id=caseRecord.id,
         case_code=caseRecord.case_code,
         status=caseRecord.status,
+        is_following=caseRecord.is_following,
         success=True,
         note=note,
         email=notifications["email"],

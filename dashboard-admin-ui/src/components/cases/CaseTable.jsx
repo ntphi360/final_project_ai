@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Eye } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Eye, Star } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { formatCaseDateTime } from '../../utils/caseTime'
 import RiskBadge from '../dashboard/RiskBadge'
@@ -83,7 +83,12 @@ export default function CaseTable({
                       onChange={() => onToggleCase(item.id)}
                     />
                   </td>
-                  <td><span className="case-code">{item.caseCode}</span></td>
+                  <td>
+                    <span className="case-code-with-following">
+                      {item.isFollowing && <Star className="following-star" size={14} fill="currentColor" aria-label="Đang theo dõi" title="Đang theo dõi" />}
+                      <span className="case-code">{item.caseCode}</span>
+                    </span>
+                  </td>
                   <td><span className="table-ellipsis procedure-name" title={item.procedure}>{item.procedure}</span></td>
                   <td><span className="table-ellipsis" title={item.field}>{item.field}</span></td>
                   <td><span className="table-ellipsis" title={item.department}>{item.department}</span></td>

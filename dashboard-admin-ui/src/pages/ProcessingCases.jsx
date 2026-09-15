@@ -51,6 +51,8 @@ function normalizeSearch(value) {
 }
 
 function compareCasesByRiskAndDeadline(left, right) {
+  if (left.isFollowing !== right.isFollowing) return left.isFollowing ? -1 : 1
+
   const riskDifference = (riskPriority[left.riskLevel] ?? 4)
     - (riskPriority[right.riskLevel] ?? 4)
   if (riskDifference !== 0) return riskDifference
@@ -181,22 +183,8 @@ export default function ProcessingCases() {
         && (appliedFilters.officer === 'all' || item.officer === appliedFilters.officer)
         && (appliedFilters.status === 'all' || item.status === appliedFilters.status)
     })
-    const requestedRiskLevels = Array.isArray(location.state?.riskLevels)
-      ? location.state.riskLevels
-      : []
-    if (activeTab === 'all') {
-      return [...filtered].sort(compareCasesByRiskAndDeadline)
-    }
-    if (requestedRiskLevels.length === 0) return filtered
-
-    const priorityByRiskLevel = new Map(
-      requestedRiskLevels.map((riskLevel, index) => [riskLevel, index]),
-    )
-    return [...filtered].sort((left, right) => {
-      return (priorityByRiskLevel.get(left.riskLevel) ?? requestedRiskLevels.length)
-        - (priorityByRiskLevel.get(right.riskLevel) ?? requestedRiskLevels.length)
-    })
-  }, [activeTab, appliedFilters, cases, location.state])
+    return [...filtered].sort(compareCasesByRiskAndDeadline)
+  }, [activeTab, appliedFilters, cases])
 
   const totalPages = Math.max(1, Math.ceil(filteredCases.length / pageSize))
   const pageCases = filteredCases.slice((page - 1) * pageSize, page * pageSize)
@@ -212,6 +200,7 @@ export default function ProcessingCases() {
         riskLabel: detailCaseFromList?.riskLabel || 'Chưa có AI',
         timeStatus: detailCaseFromList?.timeStatus ?? null,
         risk: detailCaseFromList?.risk ?? null,
+        isFollowing: detailCaseFromList?.isFollowing ?? detailData.isFollowing,
       }
     : detailCaseFromList
   const selectedCases = cases.filter((item) => selectedIds.includes(item.id))
@@ -279,15 +268,35 @@ export default function ProcessingCases() {
         send_sms: isConfirm && bulkChannels.sms,
         note: null,
       })
+      const updatesByCaseId = new Map(
+        result.results
+          .filter((item) => item.success)
+          .map((item) => [item.case_id, {
+            status: item.status,
+            isFollowing: item.is_following,
+          }]),
+      )
+      setCases((currentCases) => currentCases.map((item) => (
+        updatesByCaseId.has(item.id)
+          ? { ...item, ...updatesByCaseId.get(item.id) }
+          : item
+      )))
+      setDetailData((current) => (
+        current && updatesByCaseId.has(current.id)
+          ? { ...current, ...updatesByCaseId.get(current.id) }
+          : current
+      ))
       setFeedback(
-        `Đã xử lý ${result.success_count} hồ sơ. Bỏ qua ${result.skipped_count} hồ sơ. `
+        (isConfirm
+          ? `Đã xác nhận ${result.success_count} hồ sơ.`
+          : `Đã thêm ${result.success_count} hồ sơ vào danh sách theo dõi.`)
+        + ` Bỏ qua ${result.skipped_count} hồ sơ. `
         + `Thông báo gửi thất bại: ${result.failed_notification_count}.`,
       )
       setConfirmModalOpen(false)
       setSelectedIds([])
       setBulkAction(null)
       setBulkChannels(emptyBulkChannels)
-      await loadCases()
     } catch (error) {
       setFeedback(getApiErrorMessage(error, 'Không thể thực hiện thao tác hàng loạt.'))
     } finally {
@@ -319,12 +328,14 @@ export default function ProcessingCases() {
       const failedNotifications = [result.email, result.sms].filter(
         (delivery) => delivery && !delivery.success,
       ).length
-      updateCase(detailCase.id, { status: result.status })
-      setFeedback(
-        `Hồ sơ ${detailCase.caseCode} đã chuyển sang “${result.status}”.`
-        + (failedNotifications ? ` Có ${failedNotifications} kênh thông báo gửi thất bại.` : ''),
-      )
-      await loadCases()
+      updateCase(detailCase.id, {
+        status: result.status,
+        isFollowing: result.is_following,
+      })
+      setFeedback(isConfirm
+        ? `Hồ sơ ${detailCase.caseCode} đã chuyển sang “${result.status}”.`
+          + (failedNotifications ? ` Có ${failedNotifications} kênh thông báo gửi thất bại.` : '')
+        : 'Đã thêm hồ sơ vào danh sách theo dõi.')
     } catch (error) {
       setFeedback(getApiErrorMessage(error, 'Không thể cập nhật hồ sơ.'))
     } finally {
