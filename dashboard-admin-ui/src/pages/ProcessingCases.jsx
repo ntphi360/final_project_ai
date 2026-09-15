@@ -39,8 +39,36 @@ const riskLevelByTab = {
   Thấp: 'LOW',
 }
 
+const riskPriority = {
+  VERY_HIGH: 0,
+  HIGH: 1,
+  MEDIUM: 2,
+  LOW: 3,
+}
+
 function normalizeSearch(value) {
   return value.trim().toLocaleLowerCase('vi')
+}
+
+function compareCasesByRiskAndDeadline(left, right) {
+  const riskDifference = (riskPriority[left.riskLevel] ?? 4)
+    - (riskPriority[right.riskLevel] ?? 4)
+  if (riskDifference !== 0) return riskDifference
+
+  const leftOverdue = left.timeStatus === 'OVERDUE'
+  const rightOverdue = right.timeStatus === 'OVERDUE'
+  if (leftOverdue !== rightOverdue) return leftOverdue ? -1 : 1
+
+  const leftDeadline = Date.parse(left.deadlineAt)
+  const rightDeadline = Date.parse(right.deadlineAt)
+  const leftValid = Number.isFinite(leftDeadline)
+  const rightValid = Number.isFinite(rightDeadline)
+  if (leftValid !== rightValid) return leftValid ? -1 : 1
+  if (!leftValid) return 0
+
+  return leftOverdue
+    ? rightDeadline - leftDeadline
+    : leftDeadline - rightDeadline
 }
 
 export default function ProcessingCases() {
@@ -156,6 +184,9 @@ export default function ProcessingCases() {
     const requestedRiskLevels = Array.isArray(location.state?.riskLevels)
       ? location.state.riskLevels
       : []
+    if (activeTab === 'all') {
+      return [...filtered].sort(compareCasesByRiskAndDeadline)
+    }
     if (requestedRiskLevels.length === 0) return filtered
 
     const priorityByRiskLevel = new Map(
