@@ -180,6 +180,7 @@
 .case-status-tab.tab-rất-cao { color: #e52f3d; background: #fff1f2; }
 .case-status-tab.tab-cao { color: #f06b14; background: #fff3ec; }
 .case-status-tab.tab-trung-bình { color: #dc9d00; background: #fff8e4; }
+.case-status-tab.tab-thấp { color: #0aa96f; background: #ebfaf4; }
 .case-status-tab.tab-chờ-xác-nhận { color: #0b71dc; background: #eaf5ff; }
 .case-status-tab.tab-đã-xác-nhận { color: #4e698c; background: #eef3f8; }
 

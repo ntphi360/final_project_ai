@@ -5,17 +5,23 @@ const tabDefinitions = [
   { id: 'Rất cao', label: 'Rất cao', icon: AlertCircle },
   { id: 'Cao', label: 'Cao', icon: AlertCircle },
   { id: 'Trung bình', label: 'Trung bình', icon: AlertCircle },
+  { id: 'Thấp', label: 'Thấp', icon: CircleCheck },
   { id: 'Chờ xác nhận', label: 'Chờ xác nhận', icon: Clock3 },
   { id: 'Đã xác nhận', label: 'Đã xác nhận', icon: CircleCheck },
 ]
 
-const riskTabs = ['Rất cao', 'Cao', 'Trung bình']
+const riskLevelByTab = {
+  'Rất cao': 'VERY_HIGH',
+  Cao: 'HIGH',
+  'Trung bình': 'MEDIUM',
+  Thấp: 'LOW',
+}
 
 export default function CaseStatusTabs({ activeTab, cases, onChange }) {
   const getCount = (tabId) => {
     if (tabId === 'all') return cases.length
-    if (riskTabs.includes(tabId)) {
-      return cases.filter((item) => item.riskLabel === tabId).length
+    if (riskLevelByTab[tabId]) {
+      return cases.filter((item) => item.riskLevel === riskLevelByTab[tabId]).length
     }
     return cases.filter((item) => item.status === tabId).length
   }

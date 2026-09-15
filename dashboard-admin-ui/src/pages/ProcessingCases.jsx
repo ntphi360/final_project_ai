@@ -27,6 +27,13 @@ const emptyFilters = {
 
 const emptyBulkChannels = { email: false, sms: false }
 
+const riskLevelByTab = {
+  'Rất cao': 'VERY_HIGH',
+  Cao: 'HIGH',
+  'Trung bình': 'MEDIUM',
+  Thấp: 'LOW',
+}
+
 function normalizeSearch(value) {
   return value.trim().toLocaleLowerCase('vi')
 }
@@ -121,7 +128,7 @@ export default function ProcessingCases() {
   const filteredCases = useMemo(() => {
     const filtered = cases.filter((item) => {
       const tabMatches = activeTab === 'all'
-        || (['Rất cao', 'Cao', 'Trung bình'].includes(activeTab) && item.riskLabel === activeTab)
+        || (riskLevelByTab[activeTab] && item.riskLevel === riskLevelByTab[activeTab])
         || item.status === activeTab
       const localQuery = normalizeSearch(appliedFilters.query)
       const searchableText = normalizeSearch([
