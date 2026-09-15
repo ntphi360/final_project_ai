@@ -1,3 +1,4 @@
+from app.schemas.ai import AIPredictionResponse, AIExpertPredictions
 from app.schemas.case import (
     CaseDepartmentResponse,
     CaseDetailResponse,
@@ -29,6 +30,8 @@ from app.schemas.auth import LoginRequest, LoginResponse
 from app.schemas.user import UserCreate, UserPasswordReset, UserResponse, UserStatusUpdate, UserUpdate
 
 __all__ = [
+    "AIPredictionResponse",
+    "AIExpertPredictions",
     "CaseResponse",
     "CaseDetailResponse",
     "CaseProcedureResponse",
