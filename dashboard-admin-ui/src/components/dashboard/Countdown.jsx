@@ -1,36 +1,41 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 
-function formatTime(totalSeconds) {
-  const safeSeconds = Math.max(0, totalSeconds)
-  const days = Math.floor(safeSeconds / 86400)
-  const hours = Math.floor((safeSeconds % 86400) / 3600)
-  const minutes = Math.floor((safeSeconds % 3600) / 60)
-  const seconds = safeSeconds % 60
-
-  return {
-    days,
-    time: [hours, minutes, seconds].map((value) => String(value).padStart(2, '0')).join(':'),
-  }
+function getRemainingSeconds(deadlineAt) {
+  const deadline = new Date(deadlineAt).getTime()
+  if (!Number.isFinite(deadline)) return null
+  return Math.floor((deadline - Date.now()) / 1000)
 }
 
-export default function Countdown({ seconds, level }) {
-  const deadline = useMemo(() => Date.now() + seconds * 1000, [seconds])
-  const [remaining, setRemaining] = useState(seconds)
+function formatRemainingTime(totalSeconds) {
+  if (totalSeconds == null) return '—'
+  const isOverdue = totalSeconds <= 0
+  const absoluteSeconds = Math.abs(totalSeconds)
+  const days = Math.floor(absoluteSeconds / 86400)
+  const hours = Math.floor((absoluteSeconds % 86400) / 3600)
+  const minutes = Math.floor((absoluteSeconds % 3600) / 60)
+  const parts = []
+
+  if (days > 0) parts.push(`${days} ngày`)
+  if (hours > 0 || days > 0) parts.push(`${hours} giờ`)
+  parts.push(`${minutes} phút`)
+  return `${isOverdue ? 'Đã quá hạn ' : ''}${parts.join(' ')}`
+}
+
+export default function Countdown({ deadlineAt }) {
+  const [remainingSeconds, setRemainingSeconds] = useState(() => (
+    getRemainingSeconds(deadlineAt)
+  ))
 
   useEffect(() => {
-    const update = () => setRemaining(Math.max(0, Math.floor((deadline - Date.now()) / 1000)))
+    const update = () => setRemainingSeconds(getRemainingSeconds(deadlineAt))
     update()
     const timer = window.setInterval(update, 1000)
     return () => window.clearInterval(timer)
-  }, [deadline])
-
-  const { days, time } = formatTime(remaining)
-  const colorClass = level === 'Thấp' ? 'safe' : level === 'Trung bình' ? 'warning' : 'danger'
+  }, [deadlineAt])
 
   return (
-    <span className={`countdown ${colorClass}`}>
-      {days > 0 && <b>{days} ngày</b>}
-      <strong>{time}</strong>
+    <span className={`countdown ${remainingSeconds != null && remainingSeconds <= 0 ? 'danger' : ''}`}>
+      <strong>{formatRemainingTime(remainingSeconds)}</strong>
     </span>
   )
 }

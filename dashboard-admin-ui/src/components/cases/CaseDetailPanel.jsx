@@ -36,11 +36,11 @@ function formatDate(value) {
   }).format(new Date(value))
 }
 
-function getRiskColor(risk) {
-  if (risk >= 80) return '#ef3340'
-  if (risk >= 60) return '#f97316'
-  if (risk >= 40) return '#f4b000'
-  return '#16b779'
+const riskColors = {
+  LOW: '#16b779',
+  MEDIUM: '#f4b000',
+  HIGH: '#f97316',
+  VERY_HIGH: '#ef3340',
 }
 
 const detailRows = [
@@ -53,7 +53,7 @@ export default function CaseDetailPanel({ item, onClose, onStatusChange, onChann
   if (!item) return null
 
   const hasAiRisk = item.risk != null
-  const riskColor = hasAiRisk ? getRiskColor(item.risk) : '#94a3b8'
+  const riskColor = riskColors[item.riskLevel] || '#94a3b8'
 
   return (
     <aside className="case-detail-panel" aria-label={`Thông tin chi tiết hồ sơ ${item.caseCode}`}>
@@ -93,9 +93,9 @@ export default function CaseDetailPanel({ item, onClose, onStatusChange, onChann
           <h3><Gauge size={16} /> Đánh giá rủi ro AI <span className="info-dot">i</span></h3>
           <div className="detail-risk-grid">
             <div>
-              <span>Nguy cơ trễ hạn</span>
-              <strong style={{ color: riskColor }}>{hasAiRisk ? `${item.risk}%` : '—'}</strong>
-              <div className="detail-risk-progress"><i style={{ width: hasAiRisk ? `${item.risk}%` : '0%', backgroundColor: riskColor }} /></div>
+              <span>Tỷ lệ thời gian dự kiến / SLA</span>
+              <strong style={{ color: riskColor }}>{hasAiRisk ? `${item.risk.toFixed(2)}%` : '—'}</strong>
+              <div className="detail-risk-progress"><i style={{ width: hasAiRisk ? `${Math.min(Math.max(item.risk, 0), 100)}%` : '0%', backgroundColor: riskColor }} /></div>
             </div>
             <div>
               <span>Thời gian còn lại</span>

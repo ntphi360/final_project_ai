@@ -16,7 +16,7 @@ export function formatCountdown(totalSeconds) {
   if (days > 0) parts.push(`${days} ngày`)
   parts.push(`${hours} giờ`, `${minutes} phút`, `${seconds} giây`)
 
-  return `${isOverdue ? 'Quá hạn ' : ''}${parts.join(' ')}`
+  return `${isOverdue ? 'Đã quá hạn ' : ''}${parts.join(' ')}`
 }
 
 export default function CountdownText({ deadlineAt, emphasize = false }) {

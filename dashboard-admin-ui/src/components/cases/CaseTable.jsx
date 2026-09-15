@@ -2,11 +2,11 @@ import { ChevronLeft, ChevronRight, Eye } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import CountdownText from './CountdownText'
 
-function getRiskColor(risk) {
-  if (risk >= 80) return '#ef3340'
-  if (risk >= 60) return '#f97316'
-  if (risk >= 40) return '#f4b000'
-  return '#16b779'
+const riskColors = {
+  LOW: '#16b779',
+  MEDIUM: '#f4b000',
+  HIGH: '#f97316',
+  VERY_HIGH: '#ef3340',
 }
 
 function getVisiblePages(currentPage, totalPages) {
@@ -68,15 +68,16 @@ export default function CaseTable({
               <th>Cán bộ phụ trách</th>
               <th>Còn lại</th>
               <th>Thời gian dự kiến</th>
-              <th>Nguy cơ trễ hạn</th>
+              <th>Tỷ lệ dự kiến / SLA</th>
               <th>Trạng thái</th>
               <th className="action-column">Thao tác</th>
             </tr>
           </thead>
           <tbody>
             {cases.map((item) => {
-              const riskColor = item.risk == null ? '#94a3b8' : getRiskColor(item.risk)
+              const riskColor = riskColors[item.riskLevel] || '#94a3b8'
               const predictionText = formatPredictionHours(item.predictedProcessingHours)
+              const isOverdue = item.timeStatus === 'OVERDUE'
               return (
                 <tr className={selectedIds.includes(item.id) ? 'is-selected' : ''} key={item.id}>
                   <td className="checkbox-column">
@@ -108,7 +109,21 @@ export default function CaseTable({
                     )}
                   </td>
                   <td>
-                    {item.risk == null ? <span className="text-xs text-slate-400">Chưa có AI</span> : <div className="case-risk-meter" style={{ '--risk-color': riskColor }}><b>{item.risk}%</b><span><i style={{ width: `${item.risk}%` }} /></span></div>}
+                    {item.risk == null ? (
+                      <span className={`text-xs font-semibold ${isOverdue ? 'text-red-600' : 'text-slate-400'}`}>
+                        {isOverdue ? `Đã quá hạn · ${item.riskLabel}` : 'Chưa có AI'}
+                      </span>
+                    ) : (
+                      <div className="case-risk-meter" style={{ '--risk-color': riskColor }}>
+                        <b>{item.risk.toFixed(2)}%</b>
+                        <span><i style={{ width: `${Math.min(Math.max(item.risk, 0), 100)}%` }} /></span>
+                        {isOverdue && (
+                          <small className="text-[9px] font-semibold text-red-600">
+                            Đã quá hạn · {item.riskLabel}
+                          </small>
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td><span className={`case-status-badge status-${item.status.replaceAll(' ', '-').toLowerCase()}`}>{item.status}</span></td>
                   <td className="action-column">

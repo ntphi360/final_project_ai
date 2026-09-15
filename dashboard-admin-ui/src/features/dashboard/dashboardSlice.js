@@ -19,7 +19,7 @@ const dashboardSlice = createSlice({
     data: { summary: null, statuses: [], fields: [], recentCases: [], overdue: [], nearDeadline: [], processingCases: [] },
     loading: false,
     error: null,
-    selectedRisk: 'Tất cả mức độ',
+    selectedRisk: 'ALL',
     searchTerm: '',
   },
   reducers: {

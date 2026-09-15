@@ -118,31 +118,63 @@ export default function ProcessingCases() {
     status: ['Đang xử lý', 'Chờ xác nhận', 'Đã xác nhận'],
   }), [catalogOptions])
 
-  const filteredCases = useMemo(() => cases.filter((item) => {
-    const tabMatches = activeTab === 'all'
-      || (['Rất cao', 'Cao', 'Trung bình'].includes(activeTab) && item.priority === activeTab)
-      || item.status === activeTab
-    const localQuery = normalizeSearch(appliedFilters.query)
-    const searchableText = normalizeSearch([
-      item.caseCode,
-      item.procedure,
-      item.field,
-      item.department,
-      item.officer,
-      item.applicant,
-    ].join(' '))
+  const filteredCases = useMemo(() => {
+    const filtered = cases.filter((item) => {
+      const tabMatches = activeTab === 'all'
+        || (['Rất cao', 'Cao', 'Trung bình'].includes(activeTab) && item.riskLabel === activeTab)
+        || item.status === activeTab
+      const localQuery = normalizeSearch(appliedFilters.query)
+      const searchableText = normalizeSearch([
+        item.caseCode,
+        item.procedure,
+        item.field,
+        item.department,
+        item.officer,
+        item.applicant,
+      ].join(' '))
 
-    return tabMatches
-      && (!localQuery || searchableText.includes(localQuery))
-      && (appliedFilters.field === 'all' || item.field === appliedFilters.field)
-      && (appliedFilters.department === 'all' || item.department === appliedFilters.department)
-      && (appliedFilters.officer === 'all' || item.officer === appliedFilters.officer)
-      && (appliedFilters.status === 'all' || item.status === appliedFilters.status)
-  }), [activeTab, appliedFilters, cases])
+      return tabMatches
+        && (!localQuery || searchableText.includes(localQuery))
+        && (appliedFilters.field === 'all' || item.field === appliedFilters.field)
+        && (appliedFilters.department === 'all' || item.department === appliedFilters.department)
+        && (appliedFilters.officer === 'all' || item.officer === appliedFilters.officer)
+        && (appliedFilters.status === 'all' || item.status === appliedFilters.status)
+    })
+    const requestedRiskLevels = Array.isArray(location.state?.riskLevels)
+      ? location.state.riskLevels
+      : []
+    if (requestedRiskLevels.length === 0) return filtered
+
+    const priorityByRiskLevel = new Map(
+      requestedRiskLevels.map((riskLevel, index) => [riskLevel, index]),
+    )
+    return [...filtered].sort((left, right) => {
+      const levelDifference = (priorityByRiskLevel.get(left.riskLevel) ?? requestedRiskLevels.length)
+        - (priorityByRiskLevel.get(right.riskLevel) ?? requestedRiskLevels.length)
+      if (levelDifference !== 0) return levelDifference
+      return (right.riskPercentage ?? Number.NEGATIVE_INFINITY)
+        - (left.riskPercentage ?? Number.NEGATIVE_INFINITY)
+    })
+  }, [activeTab, appliedFilters, cases, location.state])
 
   const totalPages = Math.max(1, Math.ceil(filteredCases.length / pageSize))
   const pageCases = filteredCases.slice((page - 1) * pageSize, page * pageSize)
-  const detailCase = detailData || cases.find((item) => item.id === detailCaseId) || null
+  const detailCaseFromList = cases.find((item) => item.id === detailCaseId) || null
+  const detailCase = detailData
+    ? {
+        ...detailData,
+        predictedProcessingHours: detailCaseFromList?.predictedProcessingHours ?? null,
+        modelVersion: detailCaseFromList?.modelVersion ?? null,
+        slaHours: detailCaseFromList?.slaHours ?? null,
+        riskRatio: detailCaseFromList?.riskRatio ?? null,
+        riskPercentage: detailCaseFromList?.riskPercentage ?? null,
+        riskLevel: detailCaseFromList?.riskLevel ?? null,
+        riskLabel: detailCaseFromList?.riskLabel || 'Chưa có AI',
+        timeStatus: detailCaseFromList?.timeStatus ?? null,
+        risk: detailCaseFromList?.risk ?? null,
+        priority: detailCaseFromList?.priority || 'Chưa có AI',
+      }
+    : detailCaseFromList
   const selectedCases = cases.filter((item) => selectedIds.includes(item.id))
   const validSelectedCases = selectedCases.filter((item) => (
     bulkAction === 'follow'

@@ -8,7 +8,21 @@ import StatCard from '../components/dashboard/StatCard'
 import StatusChart from '../components/dashboard/StatusChart'
 import Header from '../components/layout/Header'
 import Sidebar from '../components/layout/Sidebar'
-import { fetchDashboard } from '../features/dashboard/dashboardSlice'
+import { fetchDashboard, setSelectedRisk } from '../features/dashboard/dashboardSlice'
+
+const riskChartDefinitions = [
+  { level: 'VERY_HIGH', name: 'Rất cao', color: '#ef3340' },
+  { level: 'HIGH', name: 'Cao', color: '#ff7917' },
+  { level: 'MEDIUM', name: 'Trung bình', color: '#f6b908' },
+  { level: 'LOW', name: 'Thấp', color: '#20b99a' },
+]
+
+const riskSortOrder = {
+  VERY_HIGH: 0,
+  HIGH: 1,
+  MEDIUM: 2,
+  LOW: 3,
+}
 
 export default function Dashboard() {
   const dispatch = useDispatch()
@@ -21,14 +35,20 @@ export default function Dashboard() {
   }, [dispatch])
 
   const summary = data.summary || { total_cases: 0, processing_cases: 0, completed_cases: 0, overdue_cases: 0 }
-  const predictedCaseCount = data.processingCases.filter((item) => (
-    item.predictedProcessingHours != null
-  )).length
+  const riskData = riskChartDefinitions.map((definition) => ({
+    ...definition,
+    value: data.processingCases.filter((item) => (
+      item.riskLevel === definition.level
+    )).length,
+  }))
+  const highRiskCount = riskData.find((item) => item.level === 'HIGH').value
+  const veryHighRiskCount = riskData.find((item) => item.level === 'VERY_HIGH').value
+  const classifiedCaseCount = riskData.reduce((total, item) => total + item.value, 0)
   const stats = [
     { id: 'total', label: 'Tổng hồ sơ', value: summary.total_cases, icon: FileText, color: '#0877ed', trend: null, sparkline: [] },
     { id: 'processing', label: 'Đang xử lý', value: summary.processing_cases, icon: Clock3, color: '#f59e0b', trend: null, sparkline: [] },
     { id: 'completed', label: 'Đã hoàn thành', value: summary.completed_cases, icon: CheckCircle2, color: '#16b779', trend: null, sparkline: [] },
-    { id: 'risk', label: 'Nguy cơ trễ hạn (AI)', value: predictedCaseCount, note: 'Hồ sơ đã có dự đoán AI', icon: AlertTriangle, color: '#ef3340', trend: null, sparkline: [] },
+    { id: 'risk', label: 'Nguy cơ trễ hạn (AI)', value: highRiskCount + veryHighRiskCount, note: `${highRiskCount} Cao · ${veryHighRiskCount} Rất cao`, icon: AlertTriangle, color: '#ef3340', trend: null, sparkline: [] },
   ]
   const statusColors = ['#0877ed', '#f6b908', '#20b99a', '#8b5cf6', '#ef3340', '#06b6d4']
   const statusData = data.statuses.map((item, index) => ({
@@ -50,16 +70,26 @@ export default function Dashboard() {
     const prediction = predictionsByCaseCode.get(item.case_code)
     return {
       id: item.case_code,
+      caseId: item.id,
+      caseCode: item.case_code,
       procedure: item.procedure_name,
       field: item.field_name || '—',
       officer: item.officer_name || 'Chưa phân công',
       department: item.department_name || '—',
       dueDate: item.deadline_at ? new Intl.DateTimeFormat('vi-VN').format(new Date(item.deadline_at)) : '—',
-      remainingSeconds: item.remaining_seconds ?? 0,
+      deadlineAt: item.deadline_at,
       risk: prediction?.riskPercentage ?? null,
-      level: 'Chưa có AI',
+      riskLevel: prediction?.riskLevel ?? null,
+      level: prediction?.riskLabel || 'Chưa có AI',
+      timeStatus: prediction?.timeStatus ?? null,
       status: item.status,
     }
+  }).sort((left, right) => {
+    const levelDifference = (riskSortOrder[left.riskLevel] ?? 4)
+      - (riskSortOrder[right.riskLevel] ?? 4)
+    if (levelDifference !== 0) return levelDifference
+    return (right.risk ?? Number.NEGATIVE_INFINITY)
+      - (left.risk ?? Number.NEGATIVE_INFINITY)
   })
 
   return (
@@ -82,7 +112,7 @@ export default function Dashboard() {
           {showNotice && (
             <div className="ai-notice">
               <Info size={21} fill="#0877ed" color="#fff" />
-              <span>Dashboard đang hiển thị tỷ lệ AI từ thời gian dự kiến trên tổng SLA. Chưa áp dụng quy tắc phân loại mức nguy cơ.</span>
+              <span>Tỷ lệ hiển thị là thời gian AI dự kiến / tổng SLA; hồ sơ đã quá hạn luôn được xếp mức Rất cao.</span>
               <button type="button" onClick={() => setShowNotice(false)} aria-label="Đóng thông báo"><X size={18} /></button>
             </div>
           )}
@@ -96,7 +126,11 @@ export default function Dashboard() {
 
           <section className="charts-grid" aria-label="Biểu đồ thống kê">
             <StatusChart data={statusData} total={summary.total_cases} />
-            <RiskChart data={[]} predictionCount={predictedCaseCount} />
+            <RiskChart
+              data={riskData}
+              predictionCount={classifiedCaseCount}
+              onSelectRisk={(riskLevel) => dispatch(setSelectedRisk(riskLevel))}
+            />
             <FieldChart data={fieldData} />
           </section>
 

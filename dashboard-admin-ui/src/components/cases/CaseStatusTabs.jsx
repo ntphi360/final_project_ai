@@ -9,11 +9,13 @@ const tabDefinitions = [
   { id: 'Đã xác nhận', label: 'Đã xác nhận', icon: CircleCheck },
 ]
 
+const riskTabs = ['Rất cao', 'Cao', 'Trung bình']
+
 export default function CaseStatusTabs({ activeTab, cases, onChange }) {
   const getCount = (tabId) => {
     if (tabId === 'all') return cases.length
-    if (['Rất cao', 'Cao', 'Trung bình'].includes(tabId)) {
-      return cases.filter((item) => item.priority === tabId).length
+    if (riskTabs.includes(tabId)) {
+      return cases.filter((item) => item.riskLabel === tabId).length
     }
     return cases.filter((item) => item.status === tabId).length
   }
@@ -25,14 +27,12 @@ export default function CaseStatusTabs({ activeTab, cases, onChange }) {
           type="button"
           role="tab"
           aria-selected={activeTab === id}
-          disabled={['Rất cao', 'Cao', 'Trung bình'].includes(id)}
-          title={['Rất cao', 'Cao', 'Trung bình'].includes(id) ? 'Chưa có dữ liệu AI' : undefined}
           className={`case-status-tab ${activeTab === id ? 'is-active' : ''} tab-${id.replaceAll(' ', '-').toLowerCase()}`}
           onClick={() => onChange(id)}
           key={id}
         >
           <Icon size={15} />
-          <span>{label} ({['Rất cao', 'Cao', 'Trung bình'].includes(id) ? '—' : getCount(id)})</span>
+          <span>{label} ({getCount(id)})</span>
         </button>
       ))}
     </div>

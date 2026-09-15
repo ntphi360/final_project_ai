@@ -33,8 +33,11 @@ export function mapCase(item) {
     slaHours: toNullableNumber(item.sla_hours),
     riskRatio: toNullableNumber(item.risk_ratio),
     riskPercentage: toNullableNumber(item.risk_percentage),
-    risk: null,
-    priority: 'Chưa có AI',
+    riskLevel: item.risk_level ?? null,
+    riskLabel: item.risk_label || 'Chưa có AI',
+    timeStatus: item.time_status ?? null,
+    risk: toNullableNumber(item.risk_percentage),
+    priority: item.risk_label || 'Chưa có AI',
     channels: [],
     note: '',
   }

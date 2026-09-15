@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -51,9 +52,12 @@ class CaseResponse(BaseModel):
 class ProcessingCaseResponse(CaseResponse):
     predicted_processing_hours: float | None = None
     model_version: str | None = None
-    sla_hours: float
+    sla_hours: float | None
     risk_ratio: float | None = None
     risk_percentage: float | None = None
+    risk_level: Literal["LOW", "MEDIUM", "HIGH", "VERY_HIGH"] | None = None
+    risk_label: str = "Chưa có AI"
+    time_status: Literal["ON_TIME", "OVERDUE"] | None = None
 
 
 class CaseDetailResponse(CaseResponse):

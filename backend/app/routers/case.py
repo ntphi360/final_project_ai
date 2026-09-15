@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -14,10 +15,8 @@ from app.schemas.case import (
     CaseResponse,
     ProcessingCaseResponse,
 )
-from app.services.ai_service import (
-    buildCaseDataForPrediction,
-    calculatePredictionRiskMetrics,
-)
+from app.services.ai_service import buildCaseDataForPrediction
+from app.services.ai_risk import calculateCaseRisk
 from app.services.case_service import (
     getCaseById,
     getCases,
@@ -56,6 +55,7 @@ def listProcessingCases(
     cases = getProcessingCases(db=db, skip=skip, limit=limit)
     responses: list[ProcessingCaseResponse] = []
     artifactAvailable = True
+    currentTime = datetime.now()
 
     for caseRecord in cases:
         predictionHours: float | None = None
@@ -89,10 +89,12 @@ def listProcessingCases(
                 )
 
         response = CaseResponse.model_validate(caseRecord)
-        riskMetrics = calculatePredictionRiskMetrics(
+        riskMetrics = calculateCaseRisk(
+            predictedProcessingHours=predictionHours,
             receivedAt=caseRecord.received_at,
             deadlineAt=caseRecord.deadline_at,
-            predictionHours=predictionHours,
+            status=caseRecord.status,
+            currentTime=currentTime,
         )
         responses.append(
             ProcessingCaseResponse(

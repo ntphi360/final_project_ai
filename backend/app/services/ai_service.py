@@ -1,4 +1,4 @@
-from datetime import datetime, time, timedelta
+from datetime import time, timedelta
 from typing import Any
 
 from sqlalchemy import and_, case, func, or_, select
@@ -6,24 +6,6 @@ from sqlalchemy.orm import InstrumentedAttribute, Session, joinedload
 
 from app.models.case import Case
 from app.models.procedure import Procedure
-
-
-def calculatePredictionRiskMetrics(
-    receivedAt: datetime,
-    deadlineAt: datetime,
-    predictionHours: float | None,
-) -> dict[str, float | None]:
-    slaHours = (deadlineAt - receivedAt).total_seconds() / 3600.0
-    riskRatio = (
-        predictionHours / slaHours
-        if predictionHours is not None and slaHours > 0
-        else None
-    )
-    return {
-        "sla_hours": slaHours,
-        "risk_ratio": riskRatio,
-        "risk_percentage": riskRatio * 100.0 if riskRatio is not None else None,
-    }
 
 
 def getCaseByCodeForPrediction(db: Session, caseCode: str) -> Case | None:
