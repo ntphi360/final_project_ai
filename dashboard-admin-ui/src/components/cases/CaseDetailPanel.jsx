@@ -16,32 +16,9 @@ import {
   UsersRound,
   X,
 } from 'lucide-react'
+import { formatCaseDateTime, formatProcessingDuration } from '../../utils/caseTime'
+import RiskProgressBar, { getRiskProgressState } from '../RiskProgressBar'
 import CountdownText from './CountdownText'
-
-function formatDateTime(value) {
-  return new Intl.DateTimeFormat('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value))
-}
-
-function formatDate(value) {
-  return new Intl.DateTimeFormat('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(new Date(value))
-}
-
-const riskColors = {
-  LOW: '#16b779',
-  MEDIUM: '#f4b000',
-  HIGH: '#f97316',
-  VERY_HIGH: '#ef3340',
-}
 
 const detailRows = [
   { key: 'field', label: 'Lĩnh vực', icon: MapPin },
@@ -52,8 +29,7 @@ const detailRows = [
 export default function CaseDetailPanel({ item, onClose, onStatusChange, onChannelChange, onNoteChange }) {
   if (!item) return null
 
-  const hasAiRisk = item.risk != null
-  const riskColor = riskColors[item.riskLevel] || '#94a3b8'
+  const hasAiRisk = getRiskProgressState(item.risk).isValid
 
   return (
     <aside className="case-detail-panel" aria-label={`Thông tin chi tiết hồ sơ ${item.caseCode}`}>
@@ -81,9 +57,10 @@ export default function CaseDetailPanel({ item, onClose, onStatusChange, onChann
             {detailRows.map(({ key, label, icon: Icon }) => (
               <div key={key}><dt><Icon size={15} /> {label}</dt><dd>{item[key]}</dd></div>
             ))}
-            <div><dt><CalendarDays size={15} /> Ngày tiếp nhận</dt><dd>{formatDateTime(item.receivedAt)}</dd></div>
-            <div><dt><Clock3 size={15} /> Hạn xử lý</dt><dd>{formatDate(item.deadlineAt)}</dd></div>
-            <div><dt><Clock3 size={15} /> Còn lại</dt><dd><CountdownText deadlineAt={item.deadlineAt} emphasize /></dd></div>
+            <div><dt><CalendarDays size={15} /> Ngày tiếp nhận</dt><dd>{formatCaseDateTime(item.receivedAt)}</dd></div>
+            <div><dt><CalendarDays size={15} /> Ngày hẹn trả</dt><dd>{formatCaseDateTime(item.deadlineAt)}</dd></div>
+            <div><dt><Clock3 size={15} /> Thời hạn xử lý</dt><dd>{formatProcessingDuration(item.receivedAt, item.deadlineAt)}</dd></div>
+            <div><dt><Clock3 size={15} /> Thời gian còn lại</dt><dd><CountdownText deadlineAt={item.deadlineAt} emphasize /></dd></div>
             <div><dt><Clipboard size={15} /> Trạng thái hiện tại</dt><dd><span className={`case-status-badge status-${item.status.replaceAll(' ', '-').toLowerCase()}`}>{item.status}</span></dd></div>
             <div><dt><Gauge size={15} /> Mức độ ưu tiên</dt><dd><span className={`priority-text priority-${item.priority.replaceAll(' ', '-').toLowerCase()}`}>{item.priority}</span></dd></div>
           </dl>
@@ -94,8 +71,7 @@ export default function CaseDetailPanel({ item, onClose, onStatusChange, onChann
           <div className="detail-risk-grid">
             <div>
               <span>Tỷ lệ thời gian dự kiến / SLA</span>
-              <strong style={{ color: riskColor }}>{hasAiRisk ? `${item.risk.toFixed(2)}%` : '—'}</strong>
-              <div className="detail-risk-progress"><i style={{ width: hasAiRisk ? `${Math.min(Math.max(item.risk, 0), 100)}%` : '0%', backgroundColor: riskColor }} /></div>
+              <RiskProgressBar value={item.risk} riskLevel={item.riskLevel} variant="detail" />
             </div>
             <div>
               <span>Thời gian còn lại</span>

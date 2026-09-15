@@ -1,13 +1,8 @@
 import { ChevronLeft, ChevronRight, Eye } from 'lucide-react'
 import { useEffect, useRef } from 'react'
+import { formatCaseDateTime } from '../../utils/caseTime'
+import RiskProgressBar from '../RiskProgressBar'
 import CountdownText from './CountdownText'
-
-const riskColors = {
-  LOW: '#16b779',
-  MEDIUM: '#f4b000',
-  HIGH: '#f97316',
-  VERY_HIGH: '#ef3340',
-}
 
 function getVisiblePages(currentPage, totalPages) {
   if (totalPages <= 5) return Array.from({ length: totalPages }, (_, index) => index + 1)
@@ -66,7 +61,9 @@ export default function CaseTable({
               <th>Lĩnh vực</th>
               <th>Phòng ban</th>
               <th>Cán bộ phụ trách</th>
-              <th>Còn lại</th>
+              <th>Ngày tiếp nhận</th>
+              <th>Ngày hẹn trả</th>
+              <th>Thời gian còn lại</th>
               <th>Thời gian dự kiến</th>
               <th>Tỷ lệ dự kiến / SLA</th>
               <th>Trạng thái</th>
@@ -75,7 +72,6 @@ export default function CaseTable({
           </thead>
           <tbody>
             {cases.map((item) => {
-              const riskColor = riskColors[item.riskLevel] || '#94a3b8'
               const predictionText = formatPredictionHours(item.predictedProcessingHours)
               const isOverdue = item.timeStatus === 'OVERDUE'
               return (
@@ -93,6 +89,8 @@ export default function CaseTable({
                   <td><span className="table-ellipsis" title={item.field}>{item.field}</span></td>
                   <td><span className="table-ellipsis" title={item.department}>{item.department}</span></td>
                   <td><span className="table-ellipsis" title={item.officer}>{item.officer}</span></td>
+                  <td><span className="whitespace-nowrap tabular-nums">{formatCaseDateTime(item.receivedAt)}</span></td>
+                  <td><span className="whitespace-nowrap tabular-nums">{formatCaseDateTime(item.deadlineAt)}</span></td>
                   <td><CountdownText deadlineAt={item.deadlineAt} /></td>
                   <td>
                     {predictionText ? (
@@ -109,21 +107,15 @@ export default function CaseTable({
                     )}
                   </td>
                   <td>
-                    {item.risk == null ? (
-                      <span className={`text-xs font-semibold ${isOverdue ? 'text-red-600' : 'text-slate-400'}`}>
-                        {isOverdue ? `Đã quá hạn · ${item.riskLabel}` : 'Chưa có AI'}
-                      </span>
-                    ) : (
-                      <div className="case-risk-meter" style={{ '--risk-color': riskColor }}>
-                        <b>{item.risk.toFixed(2)}%</b>
-                        <span><i style={{ width: `${Math.min(Math.max(item.risk, 0), 100)}%` }} /></span>
-                        {isOverdue && (
-                          <small className="text-[9px] font-semibold text-red-600">
-                            Đã quá hạn · {item.riskLabel}
-                          </small>
-                        )}
-                      </div>
-                    )}
+                    <RiskProgressBar
+                      value={item.risk}
+                      riskLevel={item.riskLevel}
+                      footer={isOverdue ? (
+                        <small className="text-[9px] font-semibold text-red-600">
+                          Đã quá hạn · {item.riskLabel}
+                        </small>
+                      ) : null}
+                    />
                   </td>
                   <td><span className={`case-status-badge status-${item.status.replaceAll(' ', '-').toLowerCase()}`}>{item.status}</span></td>
                   <td className="action-column">
@@ -135,7 +127,7 @@ export default function CaseTable({
               )
             })}
             {cases.length === 0 && (
-              <tr><td colSpan="11" className="case-empty-row">Không tìm thấy hồ sơ phù hợp.</td></tr>
+              <tr><td colSpan="13" className="case-empty-row">Không tìm thấy hồ sơ phù hợp.</td></tr>
             )}
           </tbody>
         </table>

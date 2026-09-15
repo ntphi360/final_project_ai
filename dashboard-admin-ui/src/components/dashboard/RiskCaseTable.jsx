@@ -3,16 +3,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { setSelectedRisk } from '../../features/dashboard/dashboardSlice'
+import RiskProgressBar from '../RiskProgressBar'
 import Countdown from './Countdown'
 import RiskBadge from './RiskBadge'
-
-const riskColors = {
-  Thấp: '#20b99a',
-  'Trung bình': '#f6b908',
-  Cao: '#ff7917',
-  'Rất cao': '#ef3340',
-  'Chưa có AI': '#94a3b8',
-}
 
 const pageSize = 5
 
@@ -123,13 +116,14 @@ export default function RiskCaseTable({ cases }) {
                 <td>{item.dueDate}</td>
                 <td><Countdown deadlineAt={item.deadlineAt} /></td>
                 <td>
-                  <div className="risk-meter">
-                    <span><i style={{ width: item.risk == null ? '0%' : `${Math.min(Math.max(item.risk, 0), 100)}%`, backgroundColor: riskColors[item.level] }} /></span>
-                    <div>
-                      <b style={{ color: riskColors[item.level] }}>{item.risk == null ? '—' : `${item.risk.toFixed(2)}%`}</b>
-                      {item.timeStatus === 'OVERDUE' && <small className="font-semibold text-red-600">Đã quá hạn</small>}
-                    </div>
-                  </div>
+                  <RiskProgressBar
+                    value={item.risk}
+                    riskLevel={item.riskLevel}
+                    variant="dashboard"
+                    footer={item.timeStatus === 'OVERDUE' ? (
+                      <small className="font-semibold text-red-600">Đã quá hạn</small>
+                    ) : null}
+                  />
                 </td>
                 <td><RiskBadge level={item.level} /></td>
                 <td>

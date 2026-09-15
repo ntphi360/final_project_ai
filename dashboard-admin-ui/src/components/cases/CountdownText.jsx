@@ -1,23 +1,7 @@
 import { useEffect, useState } from 'react'
+import { formatRemainingTime, getRemainingSeconds } from '../../utils/caseTime'
 
-function getRemainingSeconds(deadlineAt) {
-  return Math.floor((new Date(deadlineAt).getTime() - Date.now()) / 1000)
-}
-
-export function formatCountdown(totalSeconds) {
-  const isOverdue = totalSeconds < 0
-  const safeSeconds = Math.abs(totalSeconds)
-  const days = Math.floor(safeSeconds / 86400)
-  const hours = Math.floor((safeSeconds % 86400) / 3600)
-  const minutes = Math.floor((safeSeconds % 3600) / 60)
-  const seconds = safeSeconds % 60
-  const parts = []
-
-  if (days > 0) parts.push(`${days} ngày`)
-  parts.push(`${hours} giờ`, `${minutes} phút`, `${seconds} giây`)
-
-  return `${isOverdue ? 'Đã quá hạn ' : ''}${parts.join(' ')}`
-}
+export { formatRemainingTime as formatCountdown } from '../../utils/caseTime'
 
 export default function CountdownText({ deadlineAt, emphasize = false }) {
   const [remainingSeconds, setRemainingSeconds] = useState(() => getRemainingSeconds(deadlineAt))
@@ -29,15 +13,15 @@ export default function CountdownText({ deadlineAt, emphasize = false }) {
     return () => window.clearInterval(timer)
   }, [deadlineAt])
 
-  const urgencyClass = remainingSeconds < 0
+  const urgencyClass = remainingSeconds != null && remainingSeconds <= 0
     ? 'is-overdue'
-    : remainingSeconds <= 86400
+    : remainingSeconds != null && remainingSeconds <= 86400
       ? 'is-urgent'
       : ''
 
   return (
     <span className={`countdown-text ${urgencyClass} ${emphasize ? 'is-emphasized' : ''}`}>
-      {formatCountdown(remainingSeconds)}
+      {formatRemainingTime(remainingSeconds)}
     </span>
   )
 }
