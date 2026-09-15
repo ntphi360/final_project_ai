@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { setSelectedRisk } from '../../features/dashboard/dashboardSlice'
-import RiskProgressBar from '../RiskProgressBar'
 import Countdown from './Countdown'
 import RiskBadge from './RiskBadge'
 
@@ -53,8 +52,8 @@ export default function RiskCaseTable({ cases }) {
         <div className="table-title">
           <AlertTriangle size={23} fill="#ef3340" color="#ef3340" />
           <div>
-            <h2>Hồ sơ quá hạn hoặc gần đến hạn (Cần chú ý)</h2>
-            <p>Tỷ lệ thời gian dự kiến / SLA; hồ sơ quá hạn được ưu tiên mức Rất cao</p>
+            <h2>Hồ sơ theo mức độ rủi ro</h2>
+            <p>Phân loại hồ sơ đang xử lý theo mức độ rủi ro AI</p>
           </div>
         </div>
         <div className="table-actions">
@@ -98,7 +97,6 @@ export default function RiskCaseTable({ cases }) {
               <th>Cán bộ phụ trách</th>
               <th>Hạn xử lý</th>
               <th>Còn lại</th>
-              <th>Tỷ lệ dự kiến / SLA</th>
               <th>Mức độ</th>
               <th>Thao tác</th>
             </tr>
@@ -115,17 +113,7 @@ export default function RiskCaseTable({ cases }) {
                 </td>
                 <td>{item.dueDate}</td>
                 <td><Countdown deadlineAt={item.deadlineAt} /></td>
-                <td>
-                  <RiskProgressBar
-                    value={item.risk}
-                    riskLevel={item.riskLevel}
-                    variant="dashboard"
-                    footer={item.timeStatus === 'OVERDUE' ? (
-                      <small className="font-semibold text-red-600">Đã quá hạn</small>
-                    ) : null}
-                  />
-                </td>
-                <td><RiskBadge level={item.level} /></td>
+                <td><RiskBadge riskLevel={item.riskLevel} /></td>
                 <td>
                   <button
                     type="button"
@@ -140,7 +128,7 @@ export default function RiskCaseTable({ cases }) {
               </tr>
             ))}
             {filteredCases.length === 0 && (
-              <tr><td colSpan="9" className="empty-row">Không tìm thấy hồ sơ phù hợp.</td></tr>
+              <tr><td colSpan="8" className="empty-row">Không tìm thấy hồ sơ phù hợp.</td></tr>
             )}
           </tbody>
         </table>

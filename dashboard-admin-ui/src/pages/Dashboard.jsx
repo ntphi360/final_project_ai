@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { AlertTriangle, CalendarDays, CheckCircle2, Clock3, FileText, Info, LoaderCircle, X } from 'lucide-react'
+import { useEffect } from 'react'
+import { AlertTriangle, CheckCircle2, Clock3, FileText, LoaderCircle } from 'lucide-react'
 import { useDispatch, useSelector } from 'react-redux'
 import FieldChart from '../components/dashboard/FieldChart'
 import RiskCaseTable from '../components/dashboard/RiskCaseTable'
@@ -28,7 +28,6 @@ export default function Dashboard() {
   const dispatch = useDispatch()
   const { data, loading, error } = useSelector((state) => state.dashboard)
   const { sidebarCollapsed } = useSelector((state) => state.ui)
-  const [showNotice, setShowNotice] = useState(true)
 
   useEffect(() => {
     dispatch(fetchDashboard())
@@ -62,34 +61,23 @@ export default function Dashboard() {
     .sort((a, b) => b.count - a.count)
     .slice(0, 5)
     .map((item, index) => ({ name: item.field_name || 'Chưa xác định', value: item.count, color: fieldColors[index] }))
-  const predictionsByCaseCode = new Map(
-    data.processingCases.map((item) => [item.caseCode, item]),
-  )
-  const attentionMap = new Map([...data.overdue, ...data.nearDeadline].map((item) => [item.id, item]))
-  const attentionCases = [...attentionMap.values()].map((item) => {
-    const prediction = predictionsByCaseCode.get(item.case_code)
+  const riskCases = data.processingCases.map((item) => {
     return {
-      id: item.case_code,
+      id: item.id,
       caseId: item.id,
-      caseCode: item.case_code,
-      procedure: item.procedure_name,
-      field: item.field_name || '—',
-      officer: item.officer_name || 'Chưa phân công',
-      department: item.department_name || '—',
-      dueDate: item.deadline_at ? new Intl.DateTimeFormat('vi-VN').format(new Date(item.deadline_at)) : '—',
-      deadlineAt: item.deadline_at,
-      risk: prediction?.riskPercentage ?? null,
-      riskLevel: prediction?.riskLevel ?? null,
-      level: prediction?.riskLabel || 'Chưa có AI',
-      timeStatus: prediction?.timeStatus ?? null,
+      caseCode: item.caseCode,
+      procedure: item.procedure,
+      field: item.field || '—',
+      officer: item.officer || 'Chưa phân công',
+      department: item.department || '—',
+      dueDate: item.deadlineAt ? new Intl.DateTimeFormat('vi-VN').format(new Date(item.deadlineAt)) : '—',
+      deadlineAt: item.deadlineAt,
+      riskLevel: item.riskLevel,
       status: item.status,
     }
   }).sort((left, right) => {
-    const levelDifference = (riskSortOrder[left.riskLevel] ?? 4)
+    return (riskSortOrder[left.riskLevel] ?? 4)
       - (riskSortOrder[right.riskLevel] ?? 4)
-    if (levelDifference !== 0) return levelDifference
-    return (right.risk ?? Number.NEGATIVE_INFINITY)
-      - (left.risk ?? Number.NEGATIVE_INFINITY)
   })
 
   return (
@@ -103,19 +91,7 @@ export default function Dashboard() {
               <h1>Tổng quan</h1>
               <p>Tình hình tiếp nhận và xử lý hồ sơ từ dữ liệu hiện tại</p>
             </div>
-            <button type="button" className="date-range">
-              <CalendarDays size={18} />
-              <b>Dữ liệu hiện tại</b>
-            </button>
           </div>
-
-          {showNotice && (
-            <div className="ai-notice">
-              <Info size={21} fill="#0877ed" color="#fff" />
-              <span>Tỷ lệ hiển thị là thời gian AI dự kiến / tổng SLA; hồ sơ đã quá hạn luôn được xếp mức Rất cao.</span>
-              <button type="button" onClick={() => setShowNotice(false)} aria-label="Đóng thông báo"><X size={18} /></button>
-            </div>
-          )}
 
           {loading && <div className="mb-3 flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700"><LoaderCircle size={18} className="animate-spin" /> Đang tải dữ liệu dashboard...</div>}
           {error && <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"><span className="flex items-center gap-2"><AlertTriangle size={18} />{error}</span><button type="button" className="font-semibold underline" onClick={() => dispatch(fetchDashboard())}>Thử lại</button></div>}
@@ -134,7 +110,7 @@ export default function Dashboard() {
             <FieldChart data={fieldData} />
           </section>
 
-          <RiskCaseTable cases={attentionCases} />
+          <RiskCaseTable cases={riskCases} />
         </main>
       </div>
     </div>

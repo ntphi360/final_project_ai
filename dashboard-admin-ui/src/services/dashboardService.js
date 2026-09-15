@@ -47,16 +47,13 @@ export async function getOverdueCases(limit = 20) {
 }
 
 export async function getDashboardData() {
-  const [summary, statuses, fields, recentCases, overdue, nearDeadline, processingCases] = await Promise.all([
+  const [summary, statuses, fields, processingCases] = await Promise.all([
     getDashboardSummary(),
     getStatusDistribution(),
     getFieldDistribution(),
-    getRecentCases(),
-    getOverdueCases(),
-    getNearDeadlineCases(),
     getProcessingCases(),
   ])
-  return { summary, statuses, fields, recentCases, overdue, nearDeadline, processingCases }
+  return { summary, statuses, fields, processingCases }
 }
 
 export async function getReportDashboardData(params = {}, granularity = 'month') {

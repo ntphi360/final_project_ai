@@ -50,7 +50,7 @@ export default function ProcessingCases() {
   const [catalogOptions, setCatalogOptions] = useState({ field: [], department: [], officer: [] })
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
-  const [activeTab, setActiveTab] = useState('all')
+  const [activeTab, setActiveTab] = useState('Rất cao')
   const [draftFilters, setDraftFilters] = useState(emptyFilters)
   const [appliedFilters, setAppliedFilters] = useState(emptyFilters)
   const [selectedIds, setSelectedIds] = useState([])
@@ -162,11 +162,8 @@ export default function ProcessingCases() {
       requestedRiskLevels.map((riskLevel, index) => [riskLevel, index]),
     )
     return [...filtered].sort((left, right) => {
-      const levelDifference = (priorityByRiskLevel.get(left.riskLevel) ?? requestedRiskLevels.length)
+      return (priorityByRiskLevel.get(left.riskLevel) ?? requestedRiskLevels.length)
         - (priorityByRiskLevel.get(right.riskLevel) ?? requestedRiskLevels.length)
-      if (levelDifference !== 0) return levelDifference
-      return (right.riskPercentage ?? Number.NEGATIVE_INFINITY)
-        - (left.riskPercentage ?? Number.NEGATIVE_INFINITY)
     })
   }, [activeTab, appliedFilters, cases, location.state])
 
@@ -180,12 +177,10 @@ export default function ProcessingCases() {
         modelVersion: detailCaseFromList?.modelVersion ?? null,
         slaHours: detailCaseFromList?.slaHours ?? null,
         riskRatio: detailCaseFromList?.riskRatio ?? null,
-        riskPercentage: detailCaseFromList?.riskPercentage ?? null,
         riskLevel: detailCaseFromList?.riskLevel ?? null,
         riskLabel: detailCaseFromList?.riskLabel || 'Chưa có AI',
         timeStatus: detailCaseFromList?.timeStatus ?? null,
         risk: detailCaseFromList?.risk ?? null,
-        priority: detailCaseFromList?.priority || 'Chưa có AI',
       }
     : detailCaseFromList
   const selectedCases = cases.filter((item) => selectedIds.includes(item.id))

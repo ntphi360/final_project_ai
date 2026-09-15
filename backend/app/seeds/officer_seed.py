@@ -25,6 +25,9 @@ OFFICER_FIELD_MAPPINGS = {
         "Tư pháp",
         "Hộ tịch",
     ],
+    "Nguyễn Tiến Phi":[
+        "Đất đai",
+    ]
 }
 
 

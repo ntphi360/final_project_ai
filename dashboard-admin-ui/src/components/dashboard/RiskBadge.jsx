@@ -6,12 +6,20 @@ const styles = {
   'Chưa có AI': { className: '', dot: '#94a3b8' },
 }
 
-export default function RiskBadge({ level }) {
-  const style = styles[level] || styles['Chưa có AI']
+const labelsByRiskLevel = {
+  VERY_HIGH: 'Rất cao',
+  HIGH: 'Cao',
+  MEDIUM: 'Trung bình',
+  LOW: 'Thấp',
+}
+
+export default function RiskBadge({ level, riskLevel }) {
+  const label = labelsByRiskLevel[riskLevel] || level || 'Chưa có AI'
+  const style = styles[label] || styles['Chưa có AI']
   return (
     <span className={`risk-badge ${style.className}`}>
       <i style={{ backgroundColor: style.dot }} />
-      {level}
+      {label}
     </span>
   )
 }

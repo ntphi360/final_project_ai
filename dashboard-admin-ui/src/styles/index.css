@@ -809,34 +809,6 @@ td small {
   color: #0caf83;
 }
 
-.risk-meter {
-  display: flex;
-  min-width: 129px;
-  align-items: center;
-  gap: 9px;
-}
-
-.risk-meter > span {
-  display: block;
-  width: 81px;
-  height: 7px;
-  overflow: hidden;
-  border: 1px solid #d6e2ee;
-  border-radius: 9px;
-  background: #f2f6fa;
-}
-
-.risk-meter i {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-}
-
-.risk-meter b {
-  font-size: 12px;
-  white-space: nowrap;
-}
-
 .risk-badge {
   display: inline-flex;
   min-height: 27px;

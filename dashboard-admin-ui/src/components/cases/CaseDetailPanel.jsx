@@ -17,7 +17,7 @@ import {
   X,
 } from 'lucide-react'
 import { formatCaseDateTime, formatProcessingDuration } from '../../utils/caseTime'
-import RiskProgressBar, { getRiskProgressState } from '../RiskProgressBar'
+import RiskBadge from '../dashboard/RiskBadge'
 import CountdownText from './CountdownText'
 
 const detailRows = [
@@ -28,8 +28,6 @@ const detailRows = [
 
 export default function CaseDetailPanel({ item, onClose, onAction, onChannelChange, onNoteChange, submitting = false }) {
   if (!item) return null
-
-  const hasAiRisk = getRiskProgressState(item.risk).isValid
 
   return (
     <aside className="case-detail-panel" aria-label={`Thông tin chi tiết hồ sơ ${item.caseCode}`}>
@@ -46,9 +44,6 @@ export default function CaseDetailPanel({ item, onClose, onAction, onChannelChan
             <span>{item.procedure}</span>
           </div>
           <button type="button" className="copy-case-code" aria-label="Sao chép mã hồ sơ"><Copy size={16} /></button>
-          <span className={`priority-badge priority-${item.priority.replaceAll(' ', '-').toLowerCase()}`}>
-            <Gauge size={14} /> {item.priority}
-          </span>
         </section>
 
         <section className="detail-block">
@@ -64,23 +59,15 @@ export default function CaseDetailPanel({ item, onClose, onAction, onChannelChan
             <div><dt><Clock3 size={15} /> Thời hạn xử lý</dt><dd>{formatProcessingDuration(item.receivedAt, item.deadlineAt)}</dd></div>
             <div><dt><Clock3 size={15} /> Thời gian còn lại</dt><dd><CountdownText deadlineAt={item.deadlineAt} emphasize /></dd></div>
             <div><dt><Clipboard size={15} /> Trạng thái hiện tại</dt><dd><span className={`case-status-badge status-${item.status.replaceAll(' ', '-').toLowerCase()}`}>{item.status}</span></dd></div>
-            <div><dt><Gauge size={15} /> Mức độ ưu tiên</dt><dd><span className={`priority-text priority-${item.priority.replaceAll(' ', '-').toLowerCase()}`}>{item.priority}</span></dd></div>
           </dl>
         </section>
 
         <section className="detail-block ai-risk-block">
           <h3><Gauge size={16} /> Đánh giá rủi ro AI <span className="info-dot">i</span></h3>
-          <div className="detail-risk-grid">
-            <div>
-              <span>Tỷ lệ thời gian dự kiến / SLA</span>
-              <RiskProgressBar value={item.risk} riskLevel={item.riskLevel} variant="detail" />
-            </div>
-            <div>
-              <span>Thời gian còn lại</span>
-              <CountdownText deadlineAt={item.deadlineAt} emphasize />
-            </div>
+          <div className="detail-risk-level">
+            <span>Mức độ rủi ro</span>
+            <RiskBadge riskLevel={item.riskLevel} />
           </div>
-          <div className="ai-assessment"><strong>Nhận định của AI</strong><p>{hasAiRisk ? 'Dữ liệu dự đoán đã sẵn sàng.' : 'Chưa có dữ liệu dự đoán AI.'}</p></div>
         </section>
 
         <section className="detail-block">

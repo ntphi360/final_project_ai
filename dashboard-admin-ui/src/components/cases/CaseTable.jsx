@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight, Eye } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { formatCaseDateTime } from '../../utils/caseTime'
-import RiskProgressBar from '../RiskProgressBar'
+import RiskBadge from '../dashboard/RiskBadge'
 import CountdownText from './CountdownText'
 
 function getVisiblePages(currentPage, totalPages) {
@@ -65,7 +65,7 @@ export default function CaseTable({
               <th>Ngày hẹn trả</th>
               <th>Thời gian còn lại</th>
               <th>Thời gian dự kiến</th>
-              <th>Tỷ lệ dự kiến / SLA</th>
+              <th>Mức độ</th>
               <th>Trạng thái</th>
               <th className="action-column">Thao tác</th>
             </tr>
@@ -73,7 +73,6 @@ export default function CaseTable({
           <tbody>
             {cases.map((item) => {
               const predictionText = formatPredictionHours(item.predictedProcessingHours)
-              const isOverdue = item.timeStatus === 'OVERDUE'
               return (
                 <tr className={selectedIds.includes(item.id) ? 'is-selected' : ''} key={item.id}>
                   <td className="checkbox-column">
@@ -107,15 +106,7 @@ export default function CaseTable({
                     )}
                   </td>
                   <td>
-                    <RiskProgressBar
-                      value={item.risk}
-                      riskLevel={item.riskLevel}
-                      footer={isOverdue ? (
-                        <small className="text-[9px] font-semibold text-red-600">
-                          Đã quá hạn · {item.riskLabel}
-                        </small>
-                      ) : null}
-                    />
+                    <RiskBadge riskLevel={item.riskLevel} />
                   </td>
                   <td><span className={`case-status-badge status-${item.status.replaceAll(' ', '-').toLowerCase()}`}>{item.status}</span></td>
                   <td className="action-column">
