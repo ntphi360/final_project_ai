@@ -128,12 +128,12 @@ export default function Users() {
     } finally { setSaving(false) }
   }
 
-  const openDetail = async (userId) => {
+  const handleViewUser = async (user) => {
     setActionError('')
     try {
-      const user = await getUserById(userId)
-      setUsers((current) => current.map((item) => item.id === user.id ? user : item))
-      setDetailId(user.id)
+      const detail = await getUserById(user.id)
+      setUsers((current) => current.map((item) => item.id === detail.id ? detail : item))
+      setDetailId(detail.id)
     } catch (error) { setActionError(getApiErrorMessage(error, 'Không thể tải chi tiết người dùng.')) }
   }
 
@@ -167,7 +167,7 @@ export default function Users() {
             {(loadError || actionError) && <div className="flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"><span className="flex items-center gap-2"><AlertCircle size={18} />{loadError || actionError}</span>{loadError && <button type="button" className="font-semibold underline" onClick={loadData}>Thử lại</button>}</div>}
             <UserSummaryCards users={users} />
             <UserFilterBar filters={draftFilters} officers={[...new Set(users.map((item) => item.officerName).filter(Boolean))]} onChange={(key, value) => setDraftFilters((current) => ({ ...current, [key]: value }))} onApply={() => { setPage(1); setAppliedFilters({ ...draftFilters }) }} onReset={resetFilters} />
-            <UserTable users={pageUsers} totalCount={filteredUsers.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={(size) => { setPage(1); setPageSize(size) }} onView={openDetail} />
+            <UserTable users={pageUsers} totalCount={filteredUsers.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={(size) => { setPage(1); setPageSize(size) }} onView={handleViewUser} />
           </div>
         </main>
       </div>

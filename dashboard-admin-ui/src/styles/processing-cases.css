@@ -426,8 +426,21 @@
   vertical-align: middle;
 }
 
+.processing-case-table tbody tr.case-clickable-row {
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.processing-case-table tbody tr.case-clickable-row:hover {
+  background: #f7faff;
+}
+
 .processing-case-table tbody tr.is-selected {
   background: #f0f7ff;
+}
+
+.processing-case-table tbody tr.is-selected:hover {
+  background: #e8f3ff;
 }
 
 .processing-case-table th:nth-child(1) { width: 30px; }

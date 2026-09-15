@@ -74,12 +74,17 @@ export default function CaseTable({
             {cases.map((item) => {
               const predictionText = formatPredictionHours(item.predictedProcessingHours)
               return (
-                <tr className={selectedIds.includes(item.id) ? 'is-selected' : ''} key={item.id}>
+                <tr
+                  className={`case-clickable-row ${selectedIds.includes(item.id) ? 'is-selected' : ''}`}
+                  key={item.id}
+                  onClick={() => onView(item.id)}
+                >
                   <td className="checkbox-column">
                     <input
                       type="checkbox"
                       aria-label={`Chọn hồ sơ ${item.id}`}
                       checked={selectedIds.includes(item.id)}
+                      onClick={(event) => event.stopPropagation()}
                       onChange={() => onToggleCase(item.id)}
                     />
                   </td>
@@ -115,7 +120,14 @@ export default function CaseTable({
                   </td>
                   <td><span className={`case-status-badge status-${item.status.replaceAll(' ', '-').toLowerCase()}`}>{item.status}</span></td>
                   <td className="action-column">
-                    <button type="button" className="case-view-button" onClick={() => onView(item.id)}>
+                    <button
+                      type="button"
+                      className="case-view-button"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        onView(item.id)
+                      }}
+                    >
                       <Eye size={16} /> Xem
                     </button>
                   </td>

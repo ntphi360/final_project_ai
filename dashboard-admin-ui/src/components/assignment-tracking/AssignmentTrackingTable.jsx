@@ -40,7 +40,11 @@ export default function AssignmentTrackingTable({ assignments, totalCount, page,
               const status = assignmentStatus[item.status]
               const responseAt = item.status === 'ACCEPTED' ? item.acceptedAt : item.status === 'REJECTED' ? item.rejectedAt : null
               return (
-                <tr className="bg-white transition hover:bg-slate-50" key={item.id}>
+                <tr
+                  className="cursor-pointer bg-white transition hover:bg-slate-50"
+                  key={item.id}
+                  onClick={() => onView(item.id)}
+                >
                   <td className="h-12 border-b border-slate-100 px-3 text-center">{(page - 1) * pageSize + index + 1}</td>
                   <td className="h-12 border-b border-slate-100 px-3 font-semibold text-blue-700">{item.caseCode}</td>
                   <td className="h-12 border-b border-slate-100 px-3"><span className="block truncate" title={item.procedureName}>{item.procedureName}</span></td>
@@ -51,7 +55,16 @@ export default function AssignmentTrackingTable({ assignments, totalCount, page,
                   <td className="h-12 border-b border-slate-100 px-3 tabular-nums">{formatAssignmentDate(responseAt)}</td>
                   <td className="h-12 border-b border-slate-100 px-3"><span className="inline-flex rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">{channelLabel(item.notificationChannels)}</span></td>
                   <td className="h-12 border-b border-slate-100 px-3 text-center">
-                    <button type="button" className="mx-auto flex h-8 w-20 items-center justify-center gap-1.5 rounded-md border border-blue-500 bg-white text-xs font-semibold text-blue-700 hover:bg-blue-50" onClick={() => onView(item.id)}><Eye size={16} /> Xem</button>
+                    <button
+                      type="button"
+                      className="mx-auto flex h-8 w-20 items-center justify-center gap-1.5 rounded-md border border-blue-500 bg-white text-xs font-semibold text-blue-700 hover:bg-blue-50"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        onView(item.id)
+                      }}
+                    >
+                      <Eye size={16} /> Xem
+                    </button>
                   </td>
                 </tr>
               )
