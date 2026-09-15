@@ -2,6 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.case import Case
+from app.models.procedure import Procedure
 
 
 def getCases(db: Session, skip: int = 0, limit: int = 20) -> list[Case]:
@@ -34,6 +35,11 @@ def getProcessingCases(
 ) -> list[Case]:
     statement = (
         select(Case)
+        .options(
+            joinedload(Case.procedure).joinedload(Procedure.field),
+            joinedload(Case.department),
+            joinedload(Case.officer),
+        )
         .where(Case.completed_at.is_(None))
         .order_by(Case.id)
         .offset(skip)

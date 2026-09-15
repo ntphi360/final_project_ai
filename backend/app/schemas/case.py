@@ -48,6 +48,11 @@ class CaseResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ProcessingCaseResponse(CaseResponse):
+    predicted_processing_hours: float | None = None
+    model_version: str | None = None
+
+
 class CaseDetailResponse(CaseResponse):
     """Schema chi tiết, tách riêng để có thể mở rộng mà không đổi API danh sách."""
 

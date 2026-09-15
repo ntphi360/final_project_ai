@@ -5,6 +5,7 @@ from app.schemas.case import (
     CaseOfficerResponse,
     CaseProcedureResponse,
     CaseResponse,
+    ProcessingCaseResponse,
 )
 from app.schemas.dashboard import (
     DashboardCaseItem,
@@ -33,6 +34,7 @@ __all__ = [
     "AIPredictionResponse",
     "AIExpertPredictions",
     "CaseResponse",
+    "ProcessingCaseResponse",
     "CaseDetailResponse",
     "CaseProcedureResponse",
     "CaseDepartmentResponse",
