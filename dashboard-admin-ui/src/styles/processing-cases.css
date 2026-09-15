@@ -396,7 +396,7 @@
 
 .processing-case-table {
   width: 100%;
-  min-width: 800px;
+  min-width: 900px;
   table-layout: fixed;
   border-collapse: collapse;
   color: #24466f;
@@ -436,9 +436,10 @@
 .processing-case-table th:nth-child(5) { width: 61px; }
 .processing-case-table th:nth-child(6) { width: 82px; }
 .processing-case-table th:nth-child(7) { width: 116px; }
-.processing-case-table th:nth-child(8) { width: 93px; }
-.processing-case-table th:nth-child(9) { width: 87px; }
-.processing-case-table th:nth-child(10) { width: 72px; }
+.processing-case-table th:nth-child(8) { width: 100px; }
+.processing-case-table th:nth-child(9) { width: 93px; }
+.processing-case-table th:nth-child(10) { width: 87px; }
+.processing-case-table th:nth-child(11) { width: 72px; }
 
 input[type='checkbox'] {
   width: 15px;

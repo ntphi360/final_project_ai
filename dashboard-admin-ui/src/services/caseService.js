@@ -1,6 +1,11 @@
 import api from './api'
 
 export function mapCase(item) {
+  const predictionHours = Number(item.predicted_processing_hours)
+  const hasPrediction = item.predicted_processing_hours != null
+    && String(item.predicted_processing_hours).trim() !== ''
+    && Number.isFinite(predictionHours)
+
   return {
     id: item.id,
     caseCode: item.case_code,
@@ -22,6 +27,8 @@ export function mapCase(item) {
     procedureRelation: item.procedure ?? null,
     departmentRelation: item.department ?? null,
     officerRelation: item.officer ?? null,
+    predictedProcessingHours: hasPrediction ? predictionHours : null,
+    modelVersion: item.model_version == null ? null : String(item.model_version),
     risk: null,
     priority: 'Chưa có AI',
     channels: [],

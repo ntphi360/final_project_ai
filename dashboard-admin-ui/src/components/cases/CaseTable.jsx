@@ -15,6 +15,12 @@ function getVisiblePages(currentPage, totalPages) {
   return Array.from({ length: 5 }, (_, index) => start + index)
 }
 
+function formatPredictionHours(value) {
+  if (value == null) return null
+  const hours = Number(value)
+  return Number.isFinite(hours) ? `${hours.toFixed(2)} giờ` : null
+}
+
 export default function CaseTable({
   cases,
   totalCount,
@@ -61,6 +67,7 @@ export default function CaseTable({
               <th>Phòng ban</th>
               <th>Cán bộ phụ trách</th>
               <th>Còn lại</th>
+              <th>Thời gian dự kiến</th>
               <th>Nguy cơ trễ hạn</th>
               <th>Trạng thái</th>
               <th className="action-column">Thao tác</th>
@@ -69,6 +76,7 @@ export default function CaseTable({
           <tbody>
             {cases.map((item) => {
               const riskColor = item.risk == null ? '#94a3b8' : getRiskColor(item.risk)
+              const predictionText = formatPredictionHours(item.predictedProcessingHours)
               return (
                 <tr className={selectedIds.includes(item.id) ? 'is-selected' : ''} key={item.id}>
                   <td className="checkbox-column">
@@ -86,6 +94,20 @@ export default function CaseTable({
                   <td><span className="table-ellipsis" title={item.officer}>{item.officer}</span></td>
                   <td><CountdownText deadlineAt={item.deadlineAt} /></td>
                   <td>
+                    {predictionText ? (
+                      <span className="flex flex-col gap-0.5 tabular-nums">
+                        <strong className="font-semibold text-slate-700">{predictionText}</strong>
+                        {item.modelVersion && (
+                          <small className="text-[9px] font-medium uppercase text-slate-400">
+                            {item.modelVersion}
+                          </small>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </td>
+                  <td>
                     {item.risk == null ? <span className="text-xs text-slate-400">Chưa có AI</span> : <div className="case-risk-meter" style={{ '--risk-color': riskColor }}><b>{item.risk}%</b><span><i style={{ width: `${item.risk}%` }} /></span></div>}
                   </td>
                   <td><span className={`case-status-badge status-${item.status.replaceAll(' ', '-').toLowerCase()}`}>{item.status}</span></td>
@@ -98,7 +120,7 @@ export default function CaseTable({
               )
             })}
             {cases.length === 0 && (
-              <tr><td colSpan="10" className="case-empty-row">Không tìm thấy hồ sơ phù hợp.</td></tr>
+              <tr><td colSpan="11" className="case-empty-row">Không tìm thấy hồ sơ phù hợp.</td></tr>
             )}
           </tbody>
         </table>
