@@ -1,11 +1,12 @@
 import api from './api'
 
-export function mapCase(item) {
-  const predictionHours = Number(item.predicted_processing_hours)
-  const hasPrediction = item.predicted_processing_hours != null
-    && String(item.predicted_processing_hours).trim() !== ''
-    && Number.isFinite(predictionHours)
+function toNullableNumber(value) {
+  if (value == null || String(value).trim() === '') return null
+  const number = Number(value)
+  return Number.isFinite(number) ? number : null
+}
 
+export function mapCase(item) {
   return {
     id: item.id,
     caseCode: item.case_code,
@@ -27,8 +28,11 @@ export function mapCase(item) {
     procedureRelation: item.procedure ?? null,
     departmentRelation: item.department ?? null,
     officerRelation: item.officer ?? null,
-    predictedProcessingHours: hasPrediction ? predictionHours : null,
+    predictedProcessingHours: toNullableNumber(item.predicted_processing_hours),
     modelVersion: item.model_version == null ? null : String(item.model_version),
+    slaHours: toNullableNumber(item.sla_hours),
+    riskRatio: toNullableNumber(item.risk_ratio),
+    riskPercentage: toNullableNumber(item.risk_percentage),
     risk: null,
     priority: 'Chưa có AI',
     channels: [],

@@ -1,4 +1,5 @@
 import api from './api'
+import { getProcessingCases } from './caseService'
 
 export async function getDashboardSummary() {
   const { data } = await api.get('/api/dashboard/summary')
@@ -31,15 +32,16 @@ export async function getOverdueCases(limit = 20) {
 }
 
 export async function getDashboardData() {
-  const [summary, statuses, fields, recentCases, overdue, nearDeadline] = await Promise.all([
+  const [summary, statuses, fields, recentCases, overdue, nearDeadline, processingCases] = await Promise.all([
     getDashboardSummary(),
     getStatusDistribution(),
     getFieldDistribution(),
     getRecentCases(),
     getOverdueCases(),
     getNearDeadlineCases(),
+    getProcessingCases(),
   ])
-  return { summary, statuses, fields, recentCases, overdue, nearDeadline }
+  return { summary, statuses, fields, recentCases, overdue, nearDeadline, processingCases }
 }
 
 export async function getReportDashboardData() {

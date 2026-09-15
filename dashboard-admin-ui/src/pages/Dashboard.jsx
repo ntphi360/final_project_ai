@@ -21,11 +21,14 @@ export default function Dashboard() {
   }, [dispatch])
 
   const summary = data.summary || { total_cases: 0, processing_cases: 0, completed_cases: 0, overdue_cases: 0 }
+  const predictedCaseCount = data.processingCases.filter((item) => (
+    item.predictedProcessingHours != null
+  )).length
   const stats = [
     { id: 'total', label: 'Tổng hồ sơ', value: summary.total_cases, icon: FileText, color: '#0877ed', trend: null, sparkline: [] },
     { id: 'processing', label: 'Đang xử lý', value: summary.processing_cases, icon: Clock3, color: '#f59e0b', trend: null, sparkline: [] },
     { id: 'completed', label: 'Đã hoàn thành', value: summary.completed_cases, icon: CheckCircle2, color: '#16b779', trend: null, sparkline: [] },
-    { id: 'risk', label: 'Nguy cơ trễ hạn (AI)', value: '—', note: 'Chưa có dữ liệu AI', icon: AlertTriangle, color: '#ef3340', trend: null, sparkline: [] },
+    { id: 'risk', label: 'Nguy cơ trễ hạn (AI)', value: predictedCaseCount, note: 'Hồ sơ đã có dự đoán AI', icon: AlertTriangle, color: '#ef3340', trend: null, sparkline: [] },
   ]
   const statusColors = ['#0877ed', '#f6b908', '#20b99a', '#8b5cf6', '#ef3340', '#06b6d4']
   const statusData = data.statuses.map((item, index) => ({
@@ -39,19 +42,25 @@ export default function Dashboard() {
     .sort((a, b) => b.count - a.count)
     .slice(0, 5)
     .map((item, index) => ({ name: item.field_name || 'Chưa xác định', value: item.count, color: fieldColors[index] }))
+  const predictionsByCaseCode = new Map(
+    data.processingCases.map((item) => [item.caseCode, item]),
+  )
   const attentionMap = new Map([...data.overdue, ...data.nearDeadline].map((item) => [item.id, item]))
-  const attentionCases = [...attentionMap.values()].map((item) => ({
-    id: item.case_code,
-    procedure: item.procedure_name,
-    field: item.field_name || '—',
-    officer: item.officer_name || 'Chưa phân công',
-    department: item.department_name || '—',
-    dueDate: item.deadline_at ? new Intl.DateTimeFormat('vi-VN').format(new Date(item.deadline_at)) : '—',
-    remainingSeconds: item.remaining_seconds ?? 0,
-    risk: null,
-    level: 'Chưa có AI',
-    status: item.status,
-  }))
+  const attentionCases = [...attentionMap.values()].map((item) => {
+    const prediction = predictionsByCaseCode.get(item.case_code)
+    return {
+      id: item.case_code,
+      procedure: item.procedure_name,
+      field: item.field_name || '—',
+      officer: item.officer_name || 'Chưa phân công',
+      department: item.department_name || '—',
+      dueDate: item.deadline_at ? new Intl.DateTimeFormat('vi-VN').format(new Date(item.deadline_at)) : '—',
+      remainingSeconds: item.remaining_seconds ?? 0,
+      risk: prediction?.riskPercentage ?? null,
+      level: 'Chưa có AI',
+      status: item.status,
+    }
+  })
 
   return (
     <div className={`app-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
@@ -73,7 +82,7 @@ export default function Dashboard() {
           {showNotice && (
             <div className="ai-notice">
               <Info size={21} fill="#0877ed" color="#fff" />
-              <span>Backend chưa có dữ liệu dự đoán AI. Cảnh báo nghiệp vụ chỉ được gửi qua Email hoặc SMS khi người dùng thực hiện xác nhận.</span>
+              <span>Dashboard đang hiển thị tỷ lệ AI từ thời gian dự kiến trên tổng SLA. Chưa áp dụng quy tắc phân loại mức nguy cơ.</span>
               <button type="button" onClick={() => setShowNotice(false)} aria-label="Đóng thông báo"><X size={18} /></button>
             </div>
           )}
@@ -87,7 +96,7 @@ export default function Dashboard() {
 
           <section className="charts-grid" aria-label="Biểu đồ thống kê">
             <StatusChart data={statusData} total={summary.total_cases} />
-            <RiskChart data={[]} />
+            <RiskChart data={[]} predictionCount={predictedCaseCount} />
             <FieldChart data={fieldData} />
           </section>
 

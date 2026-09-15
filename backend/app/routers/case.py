@@ -14,7 +14,10 @@ from app.schemas.case import (
     CaseResponse,
     ProcessingCaseResponse,
 )
-from app.services.ai_service import buildCaseDataForPrediction
+from app.services.ai_service import (
+    buildCaseDataForPrediction,
+    calculatePredictionRiskMetrics,
+)
 from app.services.case_service import (
     getCaseById,
     getCases,
@@ -85,13 +88,18 @@ def listProcessingCases(
                     caseRecord.case_code,
                 )
 
-        response = ProcessingCaseResponse.model_validate(caseRecord)
+        response = CaseResponse.model_validate(caseRecord)
+        riskMetrics = calculatePredictionRiskMetrics(
+            receivedAt=caseRecord.received_at,
+            deadlineAt=caseRecord.deadline_at,
+            predictionHours=predictionHours,
+        )
         responses.append(
-            response.model_copy(
-                update={
-                    "predicted_processing_hours": predictionHours,
-                    "model_version": modelVersion,
-                }
+            ProcessingCaseResponse(
+                **response.model_dump(),
+                predicted_processing_hours=predictionHours,
+                model_version=modelVersion,
+                **riskMetrics,
             )
         )
 

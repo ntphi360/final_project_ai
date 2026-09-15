@@ -29,7 +29,7 @@ export default function RiskCaseTable({ cases }) {
           <AlertTriangle size={23} fill="#ef3340" color="#ef3340" />
           <div>
             <h2>Hồ sơ quá hạn hoặc gần đến hạn (Cần chú ý)</h2>
-            <p>Dữ liệu từ hạn xử lý; chưa có dự đoán AI</p>
+            <p>Nguy cơ AI = thời gian dự kiến / tổng SLA; chưa phân loại mức độ</p>
           </div>
         </div>
         <div className="table-actions">
@@ -77,8 +77,8 @@ export default function RiskCaseTable({ cases }) {
                 <td><Countdown seconds={item.remainingSeconds} level={item.level} /></td>
                 <td>
                   <div className="risk-meter">
-                    <span><i style={{ width: item.risk == null ? '0%' : `${item.risk}%`, backgroundColor: riskColors[item.level] }} /></span>
-                    <b style={{ color: riskColors[item.level] }}>{item.risk == null ? '—' : `${item.risk.toFixed(1)}%`}</b>
+                    <span><i style={{ width: item.risk == null ? '0%' : `${Math.min(Math.max(item.risk, 0), 100)}%`, backgroundColor: riskColors[item.level] }} /></span>
+                    <b style={{ color: riskColors[item.level] }}>{item.risk == null ? '—' : `${item.risk.toFixed(2)}%`}</b>
                   </div>
                 </td>
                 <td><RiskBadge level={item.level} /></td>

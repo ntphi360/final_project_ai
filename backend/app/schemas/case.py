@@ -51,6 +51,9 @@ class CaseResponse(BaseModel):
 class ProcessingCaseResponse(CaseResponse):
     predicted_processing_hours: float | None = None
     model_version: str | None = None
+    sla_hours: float
+    risk_ratio: float | None = None
+    risk_percentage: float | None = None
 
 
 class CaseDetailResponse(CaseResponse):

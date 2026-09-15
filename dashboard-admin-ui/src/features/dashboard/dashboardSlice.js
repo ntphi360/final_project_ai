@@ -16,7 +16,7 @@ export const fetchDashboard = createAsyncThunk(
 const dashboardSlice = createSlice({
   name: 'dashboard',
   initialState: {
-    data: { summary: null, statuses: [], fields: [], recentCases: [], overdue: [], nearDeadline: [] },
+    data: { summary: null, statuses: [], fields: [], recentCases: [], overdue: [], nearDeadline: [], processingCases: [] },
     loading: false,
     error: null,
     selectedRisk: 'Tất cả mức độ',

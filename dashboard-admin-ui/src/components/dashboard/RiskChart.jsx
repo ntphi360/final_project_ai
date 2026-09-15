@@ -12,16 +12,16 @@ import {
 } from 'recharts'
 import SectionHeading from './SectionHeading'
 
-export default function RiskChart({ data }) {
+export default function RiskChart({ data, predictionCount = 0 }) {
   return (
     <article className="dashboard-card risk-chart-card">
       <SectionHeading
         icon={BriefcaseBusiness}
         iconColor="#16b88d"
         title="Nguy cơ trễ hạn (hồ sơ đang xử lý)"
-        subtitle="Chưa có endpoint dự đoán AI"
+        subtitle={`${predictionCount} hồ sơ đã có dự đoán AI`}
       />
-      {data.length === 0 ? <div className="flex h-64 items-center justify-center px-6 text-center text-sm text-slate-500">Chưa có dữ liệu dự đoán AI.</div> : <div className="risk-chart">
+      {data.length === 0 ? <div className="flex h-64 items-center justify-center px-6 text-center text-sm text-slate-500">Chưa có quy tắc phân loại mức nguy cơ để hiển thị biểu đồ.</div> : <div className="risk-chart">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 20, right: 8, left: -14, bottom: 0 }}>
             <CartesianGrid stroke="#e6edf6" vertical={false} />
