@@ -50,6 +50,7 @@ select {
   z-index: 40;
   display: flex;
   width: 240px;
+  max-width: 100vw;
   flex-direction: column;
   overflow: hidden;
   color: #d9e6f5;
@@ -62,10 +63,13 @@ select {
 
 .brand {
   display: flex;
+  width: 100%;
+  min-width: 0;
   align-items: center;
   height: 76px;
   flex: 0 0 76px;
   padding: 12px 18px;
+  overflow: hidden;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
@@ -76,25 +80,37 @@ select {
 
 .brand-copy {
   display: flex;
+  flex: 1;
   min-width: 0;
   flex-direction: column;
   margin-left: 11px;
-  white-space: nowrap;
+  overflow: hidden;
 }
 
 .brand-copy strong {
+  display: -webkit-box;
+  overflow: hidden;
   color: white;
   font-size: 16px;
-  line-height: 1.35;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .brand-copy span {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
   color: #c5d3e2;
   font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sidebar-close {
   display: none;
+  flex: 0 0 auto;
   margin-left: auto;
   padding: 5px;
   color: white;
@@ -162,15 +178,21 @@ select {
 }
 
 .sidebar-footer {
+  width: 100%;
+  min-width: 0;
   padding: 10px 8px 15px;
+  overflow: hidden;
 }
 
 .sidebar-profile {
   display: flex;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   align-items: center;
   gap: 10px;
   padding: 10px;
+  overflow: hidden;
   color: white;
   text-align: left;
   border: 0;
@@ -198,6 +220,16 @@ select {
   min-width: 0;
   flex: 1;
   flex-direction: column;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.profile-copy strong,
+.profile-copy small {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -209,6 +241,10 @@ select {
   margin-top: 2px;
   color: #c4d4e5;
   font-size: 12px;
+}
+
+.profile-chevron {
+  flex: 0 0 auto;
 }
 
 .collapse-button {
@@ -969,7 +1005,8 @@ td small {
 
   .sidebar,
   .sidebar.is-collapsed {
-    width: 240px;
+    width: min(240px, 100vw);
+    max-width: 100vw;
     transform: translateX(-100%);
   }
 
@@ -977,17 +1014,20 @@ td small {
     transform: translateX(0);
   }
 
-  .sidebar .brand-copy,
   .sidebar .nav-label,
   .sidebar .nav-count,
-  .sidebar .profile-copy,
   .sidebar .sidebar-profile > svg,
-  .sidebar.is-collapsed .brand-copy,
   .sidebar.is-collapsed .nav-label,
   .sidebar.is-collapsed .nav-count,
-  .sidebar.is-collapsed .profile-copy,
   .sidebar.is-collapsed .sidebar-profile > svg {
     display: initial;
+  }
+
+  .sidebar .brand-copy,
+  .sidebar .profile-copy,
+  .sidebar.is-collapsed .brand-copy,
+  .sidebar.is-collapsed .profile-copy {
+    display: flex;
   }
 
   .sidebar .brand,
@@ -1003,7 +1043,11 @@ td small {
 
   .sidebar .brand,
   .sidebar.is-collapsed .brand {
-    padding-inline: 18px;
+    padding-inline: 12px;
+  }
+
+  .sidebar .brand-copy strong {
+    font-size: 14px;
   }
 
   .sidebar .nav-item,

@@ -49,7 +49,7 @@ export default function Header({
           <strong>{user?.fullName}</strong>
           <span>{roleLabels[user?.role] || user?.role}</span>
         </div>
-        <ChevronDown size={17} className="header-chevron" />
+
         <span className="header-divider" aria-hidden="true" />
         <button type="button" className="logout-button" onClick={handleLogout}>
           <LogOut size={18} />

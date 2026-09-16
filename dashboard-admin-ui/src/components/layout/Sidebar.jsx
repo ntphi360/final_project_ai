@@ -68,11 +68,7 @@ export default function Sidebar() {
           />
 
           <div className="brand-copy">
-            <strong>
-              HỆ THỐNG QUẢN LÝ
-              <br />
-              HỒ SƠ CÔNG
-            </strong>
+            <strong>HỆ THỐNG QUẢN LÝ HỒ SƠ CÔNG</strong>
             <span>Vì hành chính phục vụ</span>
           </div>
 
@@ -120,8 +116,6 @@ export default function Sidebar() {
               <strong>{user?.fullName}</strong>
               <small>{roleLabels[user?.role] || user?.role}</small>
             </span>
-
-            <ChevronDown size={17} />
           </button>
 
           <button
