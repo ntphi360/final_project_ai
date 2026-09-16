@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.ai.feature_builder import AIFeatureError
 from app.ai.model_loader import AIArtifactError
 from app.ai.predictor import predictCase
+from app.core.cache import PROCESSING_CACHE_PREFIX, buildCacheKey, cache
 from app.database.database import getDb
 from app.auth_dependencies import requireRoles
 from app.schemas.case import (
@@ -37,6 +38,8 @@ from app.services.case_service import (
 
 
 logger = logging.getLogger(__name__)
+
+PROCESSING_CACHE_TTL_SECONDS = 45
 
 router = APIRouter(
     prefix="/api/cases",
@@ -74,6 +77,20 @@ def listProcessingCases(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Từ ngày không được lớn hơn đến ngày",
         )
+    cacheKey = buildCacheKey(
+        PROCESSING_CACHE_PREFIX,
+        skip=skip,
+        limit=limit,
+        date_from=date_from,
+        date_to=date_to,
+        field_name=field_name,
+        department_name=department_name,
+        officer_id=officer_id,
+    )
+    cachedResponses = cache.get(cacheKey)
+    if cachedResponses is not None:
+        return cachedResponses
+
     filters = CaseQueryFilters(
         date_from=date_from,
         date_to=date_to,
@@ -148,6 +165,11 @@ def listProcessingCases(
             )
         )
 
+    cache.set(
+        cacheKey,
+        responses,
+        ttlSeconds=PROCESSING_CACHE_TTL_SECONDS,
+    )
     return responses
 
 

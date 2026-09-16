@@ -2,6 +2,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
+from app.core.cache import OFFICERS_CACHE_KEY, cache, invalidateProcessingCache
 from app.core.security import hashPassword, verifyPassword
 from app.models.department import Department
 from app.models.department_field import DepartmentField
@@ -84,6 +85,9 @@ def createUser(db: Session, data: UserCreate) -> User:
         db.add(user)
         db.commit()
         userId = user.id
+        invalidateProcessingCache()
+        if data.create_officer:
+            cache.delete(OFFICERS_CACHE_KEY)
     except IntegrityError as exc:
         db.rollback()
         if getUserByEmail(db, email) is not None:
@@ -114,7 +118,9 @@ def updateUser(db: Session, userId: int, data: UserUpdate) -> User:
     _validateOfficer(db, nextRole, nextOfficerId, userId)
     for key, value in values.items():
         setattr(user, key, value)
-    return _saveUser(db, user)
+    savedUser = _saveUser(db, user)
+    invalidateProcessingCache()
+    return savedUser
 
 
 def setUserStatus(db: Session, userId: int, isActive: bool, currentUserId: int) -> User:

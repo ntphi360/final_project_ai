@@ -12,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app.core.cache import invalidateProcessingCache
 from app.models.case import Case
 from app.models.import_history import ImportHistory, ImportHistoryStatus
 from app.schemas.import_case import ImportCaseResult
@@ -688,6 +689,7 @@ def importCases(
         )
 
         db.commit()
+        invalidateProcessingCache()
 
     except SQLAlchemyError as exc:
 

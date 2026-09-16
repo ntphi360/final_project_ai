@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.cache import DEPARTMENTS_CACHE_KEY, FIELDS_CACHE_KEY, cache
 from app.database.database import getDb
 from app.auth_dependencies import requireRoles
 from app.schemas.department import DepartmentResponse
@@ -21,15 +22,38 @@ router = APIRouter(
     dependencies=[Depends(requireRoles("ADMIN", "SUPERVISOR", "OFFICER", "VIEWER"))],
 )
 
+CATALOG_CACHE_TTL_SECONDS = 15 * 60
+
 
 @router.get("/departments", response_model=list[DepartmentResponse])
 def listDepartments(db: Session = Depends(getDb)):
-    return getDepartments(db=db)
+    cachedDepartments = cache.get(DEPARTMENTS_CACHE_KEY)
+    if cachedDepartments is not None:
+        return cachedDepartments
+    departments = [
+        DepartmentResponse.model_validate(item)
+        for item in getDepartments(db=db)
+    ]
+    cache.set(
+        DEPARTMENTS_CACHE_KEY,
+        departments,
+        ttlSeconds=CATALOG_CACHE_TTL_SECONDS,
+    )
+    return departments
 
 
 @router.get("/fields", response_model=list[FieldResponse])
 def listFields(db: Session = Depends(getDb)):
-    return getFields(db=db)
+    cachedFields = cache.get(FIELDS_CACHE_KEY)
+    if cachedFields is not None:
+        return cachedFields
+    fields = [FieldResponse.model_validate(item) for item in getFields(db=db)]
+    cache.set(
+        FIELDS_CACHE_KEY,
+        fields,
+        ttlSeconds=CATALOG_CACHE_TTL_SECONDS,
+    )
+    return fields
 
 
 @router.get("/procedures", response_model=list[ProcedureResponse])

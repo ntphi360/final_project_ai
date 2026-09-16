@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.cache import OFFICERS_CACHE_KEY, cache
 from app.database.database import getDb
 from app.auth_dependencies import requireRoles
 from app.schemas.field import FieldResponse
@@ -28,10 +29,24 @@ router = APIRouter(
     dependencies=[Depends(requireRoles("ADMIN", "SUPERVISOR", "OFFICER"))],
 )
 
+OFFICERS_CACHE_TTL_SECONDS = 15 * 60
+
 
 @router.get("", response_model=list[OfficerResponse])
 def listOfficers(db: Session = Depends(getDb)):
-    return getOfficers(db=db)
+    cachedOfficers = cache.get(OFFICERS_CACHE_KEY)
+    if cachedOfficers is not None:
+        return cachedOfficers
+    officers = [
+        OfficerResponse.model_validate(item)
+        for item in getOfficers(db=db)
+    ]
+    cache.set(
+        OFFICERS_CACHE_KEY,
+        officers,
+        ttlSeconds=OFFICERS_CACHE_TTL_SECONDS,
+    )
+    return officers
 
 
 @router.get("/field/{field_id}", response_model=list[OfficerResponse])

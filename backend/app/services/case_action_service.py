@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, joinedload
 
+from app.core.cache import invalidateProcessingCache
 from app.models.case import Case
 from app.models.officer import Officer
 from app.schemas.case import (
@@ -60,6 +61,7 @@ async def applyCaseAction(
         db.add(caseRecord)
         db.commit()
         db.refresh(caseRecord)
+        invalidateProcessingCache()
     except SQLAlchemyError:
         db.rollback()
         logger.exception("Cập nhật trạng thái thất bại cho case=%s", caseRecord.case_code)
