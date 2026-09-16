@@ -122,40 +122,40 @@ export default function Dashboard() {
             <Sidebar/>
             <div className="app-main">
                 <Header/>
-                <main className="dashboard-main" aria-busy={loading}>
-                    <div className="page-heading-row">
-                        <div>
-                            <h1>Tổng quan</h1>
-                            <p>Tình hình tiếp nhận và xử lý hồ sơ từ dữ liệu hiện tại</p>
-                        </div>
+                <main className="dashboard-main min-w-0 px-4 pb-10 pt-4 sm:px-5 xl:px-6" aria-busy={loading}>
+                    <header className="mb-4">
+                        <h1 className="text-2xl font-bold tracking-tight text-slate-950 lg:text-[29px]">Tổng quan</h1>
+                        <p className="mt-1 text-sm text-slate-500">Tình hình tiếp nhận và xử lý hồ sơ từ dữ liệu hiện tại</p>
+                    </header>
+
+                    <div className="space-y-3">
+                        {loading && <div
+                            className="flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700">
+                            <LoaderCircle size={18} className="animate-spin"/> Đang tải dữ liệu dashboard...</div>}
+                        {error && <div
+                            className="flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                            <span className="flex items-center gap-2"><AlertTriangle size={18}/>{error}</span>
+                            <button type="button" className="font-semibold underline"
+                                    onClick={() => dispatch(fetchDashboard())}>Thử lại
+                            </button>
+                        </div>}
+
+                        <section className="stats-grid" aria-label="Chỉ số tổng quan">
+                            {stats.map((stat) => <StatCard stat={stat} key={stat.id}/>)}
+                        </section>
+
+                        <section className="charts-grid" aria-label="Biểu đồ thống kê">
+                            <StatusChart data={statusData} total={summary.total_cases}/>
+                            <RiskChart
+                                data={riskData}
+                                predictionCount={classifiedCaseCount}
+                                onSelectRisk={(riskLevel) => dispatch(setSelectedRisk(riskLevel))}
+                            />
+                            <FieldChart data={fieldData}/>
+                        </section>
+
+                        <RiskCaseTable cases={riskCases}/>
                     </div>
-
-                    {loading && <div
-                        className="mb-3 flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700">
-                        <LoaderCircle size={18} className="animate-spin"/> Đang tải dữ liệu dashboard...</div>}
-                    {error && <div
-                        className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                        <span className="flex items-center gap-2"><AlertTriangle size={18}/>{error}</span>
-                        <button type="button" className="font-semibold underline"
-                                onClick={() => dispatch(fetchDashboard())}>Thử lại
-                        </button>
-                    </div>}
-
-                    <section className="stats-grid" aria-label="Chỉ số tổng quan">
-                        {stats.map((stat) => <StatCard stat={stat} key={stat.id}/>)}
-                    </section>
-
-                    <section className="charts-grid" aria-label="Biểu đồ thống kê">
-                        <StatusChart data={statusData} total={summary.total_cases}/>
-                        <RiskChart
-                            data={riskData}
-                            predictionCount={classifiedCaseCount}
-                            onSelectRisk={(riskLevel) => dispatch(setSelectedRisk(riskLevel))}
-                        />
-                        <FieldChart data={fieldData}/>
-                    </section>
-
-                    <RiskCaseTable cases={riskCases}/>
                 </main>
             </div>
         </div>

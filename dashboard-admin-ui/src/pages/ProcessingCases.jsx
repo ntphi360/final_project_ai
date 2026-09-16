@@ -354,7 +354,7 @@ export default function ProcessingCases() {
                     <div className={`case-workspace ${detailCase ? 'has-detail-panel' : ''}`}>
                         <div className="case-list-column">
                             <header className="processing-page-heading">
-                                <h1>Hồ sơ đang xử lý</h1>
+                                <h1 className="font-bold">Hồ sơ đang xử lý</h1>
                                 <p>Danh sách hồ sơ đang được xử lý. Bạn có thể theo dõi tiến độ, đánh giá rủi ro và thực
                                     hiện xác nhận.</p>
                             </header>
