@@ -112,7 +112,7 @@ export default function RiskCaseTable({ cases }) {
                   <small>{item.department}</small>
                 </td>
                 <td>{item.dueDate}</td>
-                <td><Countdown deadlineAt={item.deadlineAt} /></td>
+                <td><Countdown receivedAt={item.receivedAt} deadlineAt={item.deadlineAt} /></td>
                 <td><RiskBadge riskLevel={item.riskLevel} /></td>
                 <td>
                   <button

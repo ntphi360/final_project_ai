@@ -81,7 +81,7 @@ export default function CaseDetailPanel({item, onClose, onAction, onChannelChang
                         </div>
                         <div>
                             <dt><Clock3 size={15}/> Thời gian còn lại</dt>
-                            <dd><CountdownText deadlineAt={item.deadlineAt} emphasize/></dd>
+                            <dd><CountdownText receivedAt={item.receivedAt} deadlineAt={item.deadlineAt} emphasize/></dd>
                         </div>
                         <div>
                             <dt><Clipboard size={15}/> Trạng thái hiện tại</dt>

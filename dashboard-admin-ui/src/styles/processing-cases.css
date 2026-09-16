@@ -499,13 +499,13 @@ input[type='checkbox'] {
 
 .countdown-text {
   display: inline-block;
-  color: #31547c;
+  color: #059669;
   font-size: 9.5px;
   font-variant-numeric: tabular-nums;
   line-height: 1.35;
 }
 
-.countdown-text.is-urgent,
+.countdown-text.is-warning,
 .countdown-text.is-overdue {
   color: #ef3340;
   font-weight: 700;

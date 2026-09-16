@@ -1,27 +1,35 @@
 import { useEffect, useState } from 'react'
-import { formatRemainingTime, getRemainingSeconds } from '../../utils/caseTime'
+import { getRemainingTimeState } from '../../utils/caseTime'
 
 export { formatRemainingTime as formatCountdown } from '../../utils/caseTime'
 
-export default function CountdownText({ deadlineAt, emphasize = false }) {
-  const [remainingSeconds, setRemainingSeconds] = useState(() => getRemainingSeconds(deadlineAt))
+export default function CountdownText({ receivedAt, deadlineAt, emphasize = false }) {
+  const [currentTime, setCurrentTime] = useState(() => Date.now())
 
   useEffect(() => {
-    const updateCountdown = () => setRemainingSeconds(getRemainingSeconds(deadlineAt))
-    updateCountdown()
-    const timer = window.setInterval(updateCountdown, 1000)
-    return () => window.clearInterval(timer)
-  }, [deadlineAt])
+    const updateCountdown = () => {
+      const nextCurrentTime = Date.now()
+      setCurrentTime(nextCurrentTime)
+      return getRemainingTimeState(receivedAt, deadlineAt, nextCurrentTime).isOverdue
+    }
 
-  const urgencyClass = remainingSeconds != null && remainingSeconds <= 0
+    if (updateCountdown()) return undefined
+    const timer = window.setInterval(() => {
+      if (updateCountdown()) window.clearInterval(timer)
+    }, 1000)
+    return () => window.clearInterval(timer)
+  }, [receivedAt, deadlineAt])
+
+  const remainingTime = getRemainingTimeState(receivedAt, deadlineAt, currentTime)
+  const urgencyClass = remainingTime.isOverdue
     ? 'is-overdue'
-    : remainingSeconds != null && remainingSeconds <= 86400
-      ? 'is-urgent'
+    : remainingTime.isWarning
+      ? 'is-warning'
       : ''
 
   return (
     <span className={`countdown-text ${urgencyClass} ${emphasize ? 'is-emphasized' : ''}`}>
-      {formatRemainingTime(remainingSeconds)}
+      {remainingTime.text}
     </span>
   )
 }

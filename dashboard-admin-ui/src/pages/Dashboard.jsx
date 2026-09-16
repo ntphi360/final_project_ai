@@ -108,6 +108,7 @@ export default function Dashboard() {
             officer: item.officer || 'Chưa phân công',
             department: item.department || '—',
             dueDate: item.deadlineAt ? new Intl.DateTimeFormat('vi-VN').format(new Date(item.deadlineAt)) : '—',
+            receivedAt: item.receivedAt,
             deadlineAt: item.deadlineAt,
             riskLevel: item.riskLevel,
             status: item.status,

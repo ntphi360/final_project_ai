@@ -38,14 +38,31 @@ export function formatProcessingDuration(receivedAt, deadlineAt) {
   return formatDurationParts(durationSeconds)
 }
 
-export function getRemainingSeconds(deadlineAt) {
+export function getRemainingTimeState(receivedAt, deadlineAt, currentTime = Date.now()) {
+  const received = toValidDate(receivedAt)
   const deadline = toValidDate(deadlineAt)
-  if (!deadline) return null
-  return Math.floor((deadline.getTime() - Date.now()) / 1000)
+  const current = toValidDate(currentTime)
+  if (!received || !deadline || !current) {
+    return { text: '—', isOverdue: false, isWarning: false }
+  }
+
+  const receivedTime = received.getTime()
+  const deadlineTime = deadline.getTime()
+  const currentTimestamp = current.getTime()
+  const isOverdue = currentTimestamp >= deadlineTime
+  if (isOverdue) {
+    return { text: 'Đã quá hạn', isOverdue: true, isWarning: true }
+  }
+
+  const warningTime = receivedTime + ((deadlineTime - receivedTime) / 2)
+  const remainingSeconds = Math.floor((deadlineTime - currentTimestamp) / 1000)
+  return {
+    text: `Còn ${formatDurationParts(remainingSeconds)}`,
+    isOverdue: false,
+    isWarning: currentTimestamp >= warningTime,
+  }
 }
 
-export function formatRemainingTime(totalSeconds) {
-  if (!Number.isFinite(totalSeconds)) return '—'
-  const prefix = totalSeconds <= 0 ? 'Đã quá hạn' : 'Còn'
-  return `${prefix} ${formatDurationParts(totalSeconds)}`
+export function formatRemainingTime(receivedAt, deadlineAt, currentTime = Date.now()) {
+  return getRemainingTimeState(receivedAt, deadlineAt, currentTime).text
 }

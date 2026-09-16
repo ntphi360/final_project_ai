@@ -100,7 +100,7 @@ export default function CaseTable({
                   <td><span className="table-ellipsis" title={item.officer}>{item.officer}</span></td>
                   <td><span className="whitespace-nowrap tabular-nums">{formatCaseDateTime(item.receivedAt)}</span></td>
                   <td><span className="whitespace-nowrap tabular-nums">{formatCaseDateTime(item.deadlineAt)}</span></td>
-                  <td><CountdownText deadlineAt={item.deadlineAt} /></td>
+                  <td><CountdownText receivedAt={item.receivedAt} deadlineAt={item.deadlineAt} /></td>
                   <td>
                     {predictionText ? (
                       <span className="flex flex-col gap-0.5 tabular-nums">
