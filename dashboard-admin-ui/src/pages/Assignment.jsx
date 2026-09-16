@@ -13,25 +13,16 @@ import {getAllProcessingCases} from '../services/caseService'
 import {getDepartments, getFields} from '../services/catalogService'
 import {getOfficers, getOfficersByField} from '../services/officerService'
 import {getApiErrorMessage} from '../services/serviceUtils'
+import {
+    formatBulkNotificationFeedback,
+    formatSingleNotificationFeedback,
+} from '../utils/notificationFeedback'
 
 const emptyFilters = {query: '', field: 'all', department: 'all', officer: 'all', status: 'all'}
 const initialForm = {email: true, sms: false, officerId: '', title: '', content: ''}
 
 function normalize(value) {
     return value.trim().toLocaleLowerCase('vi')
-}
-
-function notificationSummary(notifications = []) {
-    return [['email', 'Email'], ['sms', 'SMS']]
-        .map(([channel, label]) => {
-            const deliveries = notifications.map((item) => item[channel]).filter(Boolean)
-            if (!deliveries.length) return ''
-            const sent = deliveries.filter((item) => item.success).length
-            const failed = deliveries.length - sent
-            return `${label}: ${sent} đã gửi${failed ? `, ${failed} thất bại` : ''}.`
-        })
-        .filter(Boolean)
-        .join(' ')
 }
 
 export default function Assignment() {
@@ -194,6 +185,8 @@ export default function Assignment() {
 
     const confirmAssignment = async () => {
         setActionError('')
+        const selectedCount = selectedIds.length
+        const selectedChannels = {email: form.email, sms: form.sms}
         try {
             const result = await dispatch(createAssignmentBatch({
                 caseIds: selectedIds,
@@ -204,8 +197,23 @@ export default function Assignment() {
                 sendSms: form.sms,
             })).unwrap()
             setModalOpen(false)
-            const deliveryMessage = notificationSummary(result.notifications)
-            setToast(`Đã giao thành công ${result.createdCount} hồ sơ.${result.skippedCount ? ` ${result.skippedCount} hồ sơ bị bỏ qua do đã có giao việc đang chờ.` : ''}${deliveryMessage ? ` ${deliveryMessage}` : ''}`)
+            if (selectedCount === 1 && result.createdCount === 1) {
+                setToast(formatSingleNotificationFeedback(
+                    'Giao việc thành công.',
+                    selectedChannels,
+                    result.notifications[0] || {},
+                ))
+            } else {
+                const failedCount = Math.max(selectedCount - result.createdCount - result.skippedCount, 0)
+                setToast(formatBulkNotificationFeedback({
+                    title: 'Giao việc hoàn tất',
+                    successCount: result.createdCount,
+                    skippedCount: result.skippedCount,
+                    failedCount,
+                    channels: selectedChannels,
+                    notifications: result.notifications,
+                }))
+            }
             resetAssignment()
             await loadData()
         } catch (error) {
@@ -293,8 +301,9 @@ export default function Assignment() {
             />
 
             {toast && <div
-                className="fixed bottom-5 right-5 z-[80] flex max-w-sm items-center gap-3 rounded-lg border border-emerald-200 bg-white px-4 py-3 text-sm font-semibold text-emerald-700 shadow-xl"
-                role="status"><CheckCircle2 size={20} className="shrink-0"/><span>{toast}</span>
+                className="fixed bottom-5 right-5 z-[80] flex max-w-sm items-start gap-3 rounded-lg border border-emerald-200 bg-white px-4 py-3 text-sm font-semibold text-emerald-700 shadow-xl"
+                role="status"><CheckCircle2 size={20} className="mt-0.5 shrink-0"/><span
+                    className="whitespace-pre-line leading-5">{toast}</span>
                 <button type="button" aria-label="Đóng thông báo" className="ml-2 text-slate-400 hover:text-slate-600"
                         onClick={() => setToast('')}><X size={17}/></button>
             </div>}

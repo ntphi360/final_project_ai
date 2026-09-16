@@ -20,6 +20,10 @@ import {
 import {getDepartments, getFields} from '../services/catalogService'
 import {getOfficers} from '../services/officerService'
 import {getApiErrorMessage} from '../services/serviceUtils'
+import {
+    formatBulkNotificationFeedback,
+    formatSingleNotificationFeedback,
+} from '../utils/notificationFeedback'
 import '../styles/processing-cases.css'
 
 const emptyFilters = {
@@ -288,13 +292,23 @@ export default function ProcessingCases() {
                     ? {...current, ...updatesByCaseId.get(current.id)}
                     : current
             ))
-            setFeedback(
-                (isConfirm
-                    ? `Đã xác nhận ${result.success_count} hồ sơ.`
-                    : `Đã thêm ${result.success_count} hồ sơ vào danh sách theo dõi.`)
-                + ` Bỏ qua ${result.skipped_count} hồ sơ. `
-                + `Thông báo gửi thất bại: ${result.failed_notification_count}.`,
-            )
+            if (isConfirm) {
+                const successfulResults = result.results.filter((item) => item.success)
+                const failedCount = result.results.length - result.success_count - result.skipped_count
+                setFeedback(formatBulkNotificationFeedback({
+                    title: 'Xác nhận hồ sơ hoàn tất',
+                    successCount: result.success_count,
+                    skippedCount: result.skipped_count,
+                    failedCount,
+                    channels: bulkChannels,
+                    notifications: successfulResults,
+                }))
+            } else {
+                setFeedback(
+                    `Đã thêm ${result.success_count} hồ sơ vào danh sách theo dõi.\n`
+                    + `Bỏ qua: ${result.skipped_count} hồ sơ.`,
+                )
+            }
             setConfirmModalOpen(false)
             setSelectedIds([])
             setBulkAction(null)
@@ -319,24 +333,28 @@ export default function ProcessingCases() {
         if (!detailCase || actionSubmitting) return
 
         const isConfirm = action === 'CONFIRM'
+        const selectedChannels = {
+            email: isConfirm && detailCase.channels.includes('Email'),
+            sms: isConfirm && detailCase.channels.includes('SMS'),
+        }
         setActionSubmitting(true)
         try {
             const result = await performCaseAction(detailCase.id, {
                 action,
-                send_email: isConfirm && detailCase.channels.includes('Email'),
-                send_sms: isConfirm && detailCase.channels.includes('SMS'),
+                send_email: selectedChannels.email,
+                send_sms: selectedChannels.sms,
                 note: detailCase.note || null,
             })
-            const failedNotifications = [result.email, result.sms].filter(
-                (delivery) => delivery && !delivery.success,
-            ).length
             updateCase(detailCase.id, {
                 status: result.status,
                 isFollowing: result.is_following,
             })
             setFeedback(isConfirm
-                ? `Hồ sơ ${detailCase.caseCode} đã chuyển sang “${result.status}”.`
-                + (failedNotifications ? ` Có ${failedNotifications} kênh thông báo gửi thất bại.` : '')
+                ? formatSingleNotificationFeedback(
+                    'Đã xác nhận hồ sơ thành công.',
+                    selectedChannels,
+                    {email: result.email, sms: result.sms},
+                )
                 : 'Đã thêm hồ sơ vào danh sách theo dõi.')
         } catch (error) {
             setFeedback(getApiErrorMessage(error, 'Không thể cập nhật hồ sơ.'))
@@ -387,7 +405,7 @@ export default function ProcessingCases() {
 
                             {feedback && (
                                 <div className="case-feedback" role="status">
-                                    <span>{feedback}</span>
+                                    <span className="whitespace-pre-line">{feedback}</span>
                                     <button type="button" aria-label="Đóng thông báo" onClick={() => setFeedback('')}><X
                                         size={17}/></button>
                                 </div>

@@ -69,17 +69,35 @@ async def applyCaseAction(
 
     notifications = {"email": None, "sms": None}
     if isConfirm and (sendEmailNotification or sendSmsNotification):
-        notifications = await sendCaseConfirmationNotification(
-            caseRecord=caseRecord,
-            recipient=(
-                caseRecord.officer.user
-                if caseRecord.officer and caseRecord.officer.user
-                else None
-            ),
-            sendEmailNotification=sendEmailNotification,
-            sendSmsNotification=sendSmsNotification,
-            note=note,
-        )
+        try:
+            notifications = await sendCaseConfirmationNotification(
+                caseRecord=caseRecord,
+                recipient=(
+                    caseRecord.officer.user
+                    if caseRecord.officer and caseRecord.officer.user
+                    else None
+                ),
+                sendEmailNotification=sendEmailNotification,
+                sendSmsNotification=sendSmsNotification,
+                note=note,
+            )
+        except Exception:
+            logger.exception(
+                "Gửi thông báo xác nhận thất bại cho case=%s",
+                caseRecord.case_code,
+            )
+            notifications = {
+                "email": (
+                    _notificationFailure("GMAIL_SMTP")
+                    if sendEmailNotification
+                    else None
+                ),
+                "sms": (
+                    _notificationFailure("TEXTBEE")
+                    if sendSmsNotification
+                    else None
+                ),
+            }
 
     return CaseActionResponse(
         case_id=caseRecord.id,
@@ -159,3 +177,13 @@ def _skippedResult(caseId: int, reason: str) -> CaseActionResponse:
         skipped=True,
         reason=reason,
     )
+
+
+def _notificationFailure(provider: str) -> dict:
+    return {
+        "success": False,
+        "provider": provider,
+        "recipient": None,
+        "message_id": None,
+        "error": "Không thể xử lý gửi thông báo.",
+    }
