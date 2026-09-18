@@ -45,6 +45,10 @@ async def applyCaseAction(
     sendEmailNotification = isConfirm and data.send_email
     sendSmsNotification = isConfirm and data.send_sms
     note = data.note.strip() if data.note and data.note.strip() else None
+    caseRecordId = caseRecord.id
+    caseCode = caseRecord.case_code
+    originalStatus = caseRecord.status
+    originalIsFollowing = caseRecord.is_following
 
     logger.info(
         "%s case=%s officer=%s send_email=%s send_sms=%s",
@@ -55,49 +59,79 @@ async def applyCaseAction(
         str(sendSmsNotification).lower(),
     )
 
-    caseRecord.status = CONFIRMED_STATUS if isConfirm else FOLLOWING_STATUS
-    caseRecord.is_following = not isConfirm
-    try:
-        db.add(caseRecord)
-        db.commit()
-        db.refresh(caseRecord)
-        invalidateProcessingCache()
-    except SQLAlchemyError:
-        db.rollback()
-        logger.exception("Cập nhật trạng thái thất bại cho case=%s", caseRecord.case_code)
-        raise
+    if not isConfirm:
+        _persistCaseState(
+            db=db,
+            caseRecord=caseRecord,
+            status=FOLLOWING_STATUS,
+            isFollowing=True,
+        )
+        return CaseActionResponse(
+            case_id=caseRecord.id,
+            case_code=caseRecord.case_code,
+            status=caseRecord.status,
+            is_following=caseRecord.is_following,
+            success=True,
+            confirmed=None,
+            note=note,
+        )
 
     notifications = {"email": None, "sms": None}
-    if isConfirm and (sendEmailNotification or sendSmsNotification):
-        try:
-            notifications = await sendCaseConfirmationNotification(
-                caseRecord=caseRecord,
-                recipient=(
-                    caseRecord.officer.user
-                    if caseRecord.officer and caseRecord.officer.user
-                    else None
-                ),
-                sendEmailNotification=sendEmailNotification,
-                sendSmsNotification=sendSmsNotification,
-                note=note,
-            )
-        except Exception:
-            logger.exception(
-                "Gửi thông báo xác nhận thất bại cho case=%s",
-                caseRecord.case_code,
-            )
-            notifications = {
-                "email": (
-                    _notificationFailure("GMAIL_SMTP")
-                    if sendEmailNotification
-                    else None
-                ),
-                "sms": (
-                    _notificationFailure("TEXTBEE")
-                    if sendSmsNotification
-                    else None
-                ),
-            }
+    try:
+        notifications = await sendCaseConfirmationNotification(
+            caseRecord=caseRecord,
+            recipient=(
+                caseRecord.officer.user
+                if caseRecord.officer and caseRecord.officer.user
+                else None
+            ),
+            sendEmailNotification=sendEmailNotification,
+            sendSmsNotification=sendSmsNotification,
+            note=note,
+        )
+    except Exception:
+        logger.exception(
+            "Gửi thông báo xác nhận thất bại cho case=%s",
+            caseRecord.case_code,
+        )
+        notifications = {
+            "email": (
+                _notificationFailure("GMAIL_SMTP")
+                if sendEmailNotification
+                else None
+            ),
+            "sms": (
+                _notificationFailure("TEXTBEE")
+                if sendSmsNotification
+                else None
+            ),
+        }
+
+    notificationSucceeded = any(
+        delivery is not None and delivery.get("status") == "SENT"
+        for delivery in (notifications["email"], notifications["sms"])
+    )
+    if not notificationSucceeded:
+        db.rollback()
+        return CaseActionResponse(
+            case_id=caseRecordId,
+            case_code=caseCode,
+            status=originalStatus,
+            is_following=originalIsFollowing,
+            success=False,
+            confirmed=False,
+            reason="Không có kênh thông báo nào gửi thành công.",
+            note=note,
+            email=notifications["email"],
+            sms=notifications["sms"],
+        )
+
+    _persistCaseState(
+        db=db,
+        caseRecord=caseRecord,
+        status=CONFIRMED_STATUS,
+        isFollowing=False,
+    )
 
     return CaseActionResponse(
         case_id=caseRecord.id,
@@ -105,6 +139,7 @@ async def applyCaseAction(
         status=caseRecord.status,
         is_following=caseRecord.is_following,
         success=True,
+        confirmed=True,
         note=note,
         email=notifications["email"],
         sms=notifications["sms"],
@@ -127,24 +162,40 @@ async def applyCaseBulkAction(
         try:
             result = await applyCaseAction(db=db, caseId=caseId, data=actionData)
         except CaseActionNotFoundError:
-            result = _skippedResult(caseId, "Không tìm thấy hồ sơ.")
+            result = _skippedResult(
+                caseId,
+                "Không tìm thấy hồ sơ.",
+                confirmed=False if data.action == "CONFIRM" else None,
+            )
         except CaseActionStateError as exc:
-            result = _skippedResult(caseId, str(exc))
+            result = _skippedResult(
+                caseId,
+                str(exc),
+                confirmed=False if data.action == "CONFIRM" else None,
+            )
         except Exception:
             db.rollback()
             logger.exception("Không thể xử lý case_id=%s trong batch", caseId)
             result = CaseActionResponse(
                 case_id=caseId,
                 success=False,
+                confirmed=False if data.action == "CONFIRM" else None,
                 reason="Không thể cập nhật hồ sơ.",
             )
         results.append(result)
 
     return CaseBulkActionResponse(
+        total=len(results),
         success_count=sum(result.success for result in results),
+        confirmed_count=sum(result.confirmed is True for result in results),
+        not_confirmed_count=(
+            sum(result.confirmed is False for result in results)
+            if data.action == "CONFIRM"
+            else 0
+        ),
         skipped_count=sum(result.skipped for result in results),
         failed_notification_count=sum(
-            delivery is not None and not delivery.success
+            delivery is not None and delivery.status == "FAILED"
             for result in results
             for delivery in (result.email, result.sms)
         ),
@@ -170,10 +221,34 @@ def _validateAction(caseRecord: Case, action: str) -> None:
         )
 
 
-def _skippedResult(caseId: int, reason: str) -> CaseActionResponse:
+def _persistCaseState(
+    db: Session,
+    caseRecord: Case,
+    status: str,
+    isFollowing: bool,
+) -> None:
+    caseRecord.status = status
+    caseRecord.is_following = isFollowing
+    try:
+        db.add(caseRecord)
+        db.commit()
+        db.refresh(caseRecord)
+        invalidateProcessingCache()
+    except SQLAlchemyError:
+        db.rollback()
+        logger.exception("Cập nhật trạng thái thất bại cho case=%s", caseRecord.case_code)
+        raise
+
+
+def _skippedResult(
+    caseId: int,
+    reason: str,
+    confirmed: bool | None = None,
+) -> CaseActionResponse:
     return CaseActionResponse(
         case_id=caseId,
         success=False,
+        confirmed=confirmed,
         skipped=True,
         reason=reason,
     )
@@ -181,6 +256,7 @@ def _skippedResult(caseId: int, reason: str) -> CaseActionResponse:
 
 def _notificationFailure(provider: str) -> dict:
     return {
+        "status": "FAILED",
         "success": False,
         "provider": provider,
         "recipient": None,

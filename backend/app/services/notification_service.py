@@ -63,13 +63,21 @@ async def sendCaseConfirmationNotification(
                 "Cán bộ xử lý chưa có email.",
             )
         else:
-            logger.info("Email case=%s recipient=%s", caseRecord.case_code, recipientEmail)
-            delivery = await sendEmail(
-                recipientEmail,
-                f"[Xác nhận hồ sơ] {caseRecord.case_code}",
-                _caseConfirmationEmailContent(caseRecord, recipient, note),
-            )
-            results["email"] = _caseDelivery(delivery, recipientEmail)
+            try:
+                logger.info("Email case=%s recipient=%s", caseRecord.case_code, recipientEmail)
+                delivery = await sendEmail(
+                    recipientEmail,
+                    f"[Xác nhận hồ sơ] {caseRecord.case_code}",
+                    _caseConfirmationEmailContent(caseRecord, recipient, note),
+                )
+                results["email"] = _caseDelivery(delivery, recipientEmail)
+            except Exception:
+                logger.exception("Email case=%s gửi thất bại", caseRecord.case_code)
+                results["email"] = _caseFailure(
+                    "GMAIL_SMTP",
+                    recipientEmail,
+                    "Không thể xử lý gửi email.",
+                )
             _logCaseDelivery(caseRecord.case_code, "Email", results["email"])
 
     if sendSmsNotification:
@@ -82,13 +90,22 @@ async def sendCaseConfirmationNotification(
             )
         else:
             normalizedPhone = normalizeVietnamPhone(recipientPhone)
-            logger.info(
-                "SMS case=%s recipient=%s",
-                caseRecord.case_code,
-                normalizedPhone or recipientPhone,
-            )
-            delivery = sendSms(recipientPhone, _caseConfirmationSmsContent(caseRecord, note))
-            results["sms"] = _caseDelivery(delivery, normalizedPhone or recipientPhone)
+            resolvedPhone = normalizedPhone or recipientPhone
+            try:
+                logger.info(
+                    "SMS case=%s recipient=%s",
+                    caseRecord.case_code,
+                    resolvedPhone,
+                )
+                delivery = sendSms(recipientPhone, _caseConfirmationSmsContent(caseRecord, note))
+                results["sms"] = _caseDelivery(delivery, resolvedPhone)
+            except Exception:
+                logger.exception("SMS case=%s gửi thất bại", caseRecord.case_code)
+                results["sms"] = _caseFailure(
+                    "TEXTBEE",
+                    resolvedPhone,
+                    "Không thể xử lý gửi SMS.",
+                )
             _logCaseDelivery(caseRecord.case_code, "SMS", results["sms"])
 
     return results
@@ -180,14 +197,30 @@ def _caseConfirmationSmsContent(caseRecord: Case, note: str | None) -> str:
 
 
 def _caseDelivery(result: dict[str, Any], recipient: str) -> dict[str, Any]:
-    return {**result, "recipient": recipient}
+    return {
+        **result,
+        "status": "SENT" if result["success"] else "FAILED",
+        "recipient": recipient,
+    }
 
 
 def _caseMissing(provider: str, error: str) -> dict[str, Any]:
     return {
+        "status": "NO_RECIPIENT",
         "success": False,
         "provider": provider,
         "recipient": None,
+        "message_id": None,
+        "error": error,
+    }
+
+
+def _caseFailure(provider: str, recipient: str, error: str) -> dict[str, Any]:
+    return {
+        "status": "FAILED",
+        "success": False,
+        "provider": provider,
+        "recipient": recipient,
         "message_id": None,
         "error": error,
     }

@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class CaseProcedureResponse(BaseModel):
@@ -79,12 +79,21 @@ class CaseActionRequest(BaseModel):
     send_sms: bool = False
     note: str | None = Field(default=None, max_length=500)
 
+    @model_validator(mode="after")
+    def validateConfirmationChannel(self):
+        if self.action == "CONFIRM" and not (self.send_email or self.send_sms):
+            raise ValueError(
+                "Vui lòng chọn ít nhất một kênh thông báo trước khi xác nhận."
+            )
+        return self
+
 
 class CaseBulkActionRequest(CaseActionRequest):
     case_ids: list[int] = Field(min_length=1)
 
 
 class CaseNotificationDeliveryResponse(BaseModel):
+    status: Literal["SENT", "FAILED", "NO_RECIPIENT"]
     success: bool
     provider: str
     recipient: str | None = None
@@ -98,6 +107,7 @@ class CaseActionResponse(BaseModel):
     status: str | None = None
     is_following: bool = False
     success: bool
+    confirmed: bool | None = None
     skipped: bool = False
     reason: str | None = None
     note: str | None = None
@@ -106,7 +116,10 @@ class CaseActionResponse(BaseModel):
 
 
 class CaseBulkActionResponse(BaseModel):
+    total: int
     success_count: int
+    confirmed_count: int
+    not_confirmed_count: int
     skipped_count: int
     failed_notification_count: int
     results: list[CaseActionResponse]

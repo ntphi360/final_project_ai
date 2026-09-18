@@ -265,6 +265,10 @@ export default function ProcessingCases() {
         if (!bulkAction || actionSubmitting) return
 
         const isConfirm = bulkAction === 'confirm'
+        if (isConfirm && !bulkChannels.email && !bulkChannels.sms) {
+            setFeedback('Vui lòng chọn ít nhất một kênh thông báo trước khi xác nhận.')
+            return
+        }
         setActionSubmitting(true)
         try {
             const result = await performCaseBulkAction({
@@ -293,15 +297,14 @@ export default function ProcessingCases() {
                     : current
             ))
             if (isConfirm) {
-                const successfulResults = result.results.filter((item) => item.success)
-                const failedCount = result.results.length - result.success_count - result.skipped_count
                 setFeedback(formatBulkNotificationFeedback({
                     title: 'Xác nhận hồ sơ hoàn tất',
-                    successCount: result.success_count,
+                    successCount: result.confirmed_count ?? result.success_count,
+                    notConfirmedCount: result.not_confirmed_count
+                        ?? result.results.filter((item) => item.confirmed !== true).length,
                     skippedCount: result.skipped_count,
-                    failedCount,
                     channels: bulkChannels,
-                    notifications: successfulResults,
+                    notifications: result.results,
                 }))
             } else {
                 setFeedback(
@@ -309,6 +312,7 @@ export default function ProcessingCases() {
                     + `Bỏ qua: ${result.skipped_count} hồ sơ.`,
                 )
             }
+            await loadCases()
             setConfirmModalOpen(false)
             setSelectedIds([])
             setBulkAction(null)
@@ -337,6 +341,10 @@ export default function ProcessingCases() {
             email: isConfirm && detailCase.channels.includes('Email'),
             sms: isConfirm && detailCase.channels.includes('SMS'),
         }
+        if (isConfirm && !selectedChannels.email && !selectedChannels.sms) {
+            setFeedback('Vui lòng chọn ít nhất một kênh thông báo trước khi xác nhận.')
+            return
+        }
         setActionSubmitting(true)
         try {
             const result = await performCaseAction(detailCase.id, {
@@ -345,17 +353,22 @@ export default function ProcessingCases() {
                 send_sms: selectedChannels.sms,
                 note: detailCase.note || null,
             })
-            updateCase(detailCase.id, {
-                status: result.status,
-                isFollowing: result.is_following,
-            })
+            if (result.success) {
+                updateCase(detailCase.id, {
+                    status: result.status,
+                    isFollowing: result.is_following,
+                })
+            }
             setFeedback(isConfirm
                 ? formatSingleNotificationFeedback(
-                    'Đã xác nhận hồ sơ thành công.',
+                    result.confirmed === true
+                        ? 'Xác nhận hồ sơ thành công.'
+                        : `Không thể xác nhận hồ sơ.\n${result.reason || 'Không có kênh thông báo nào gửi thành công.'}`,
                     selectedChannels,
                     {email: result.email, sms: result.sms},
                 )
                 : 'Đã thêm hồ sơ vào danh sách theo dõi.')
+            await loadCases()
         } catch (error) {
             setFeedback(getApiErrorMessage(error, 'Không thể cập nhật hồ sơ.'))
         } finally {
