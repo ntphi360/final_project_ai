@@ -49,7 +49,7 @@ export default function UserTable({users, totalCount, page, pageSize, onPageChan
                             className={`inline-flex rounded-md px-2.5 py-1 text-xs font-semibold ${roleClasses[user.role]}`}>{roleLabels[user.role]}</span>
                         </td>
                         <td className="border-b border-slate-100 px-3"><span className="block truncate"
-                                                                             title={user.departmentName || 'Không áp dụng'}>{user.departmentName || '—'}</span>
+                                                                             title={user.departmentName || '—'}>{user.departmentName || '—'}</span>
                         </td>
                         <td className="border-b border-slate-100 px-3"><span
                             className={`inline-flex rounded-md px-2.5 py-1 text-xs font-semibold ${user.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{user.isActive ? 'Hoạt động' : 'Đã khóa'}</span>

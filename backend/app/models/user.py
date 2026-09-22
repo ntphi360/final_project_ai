@@ -59,3 +59,14 @@ class User(Base):
     @property
     def officer_name(self) -> str | None:
         return self.officer.full_name if self.officer is not None else None
+
+    @property
+    def department_name(self) -> str | None:
+        if self.officer is None:
+            return None
+
+        for officerAssignment in self.officer.officer_assignments:
+            for departmentField in officerAssignment.field.department_fields:
+                return departmentField.department.name
+
+        return None

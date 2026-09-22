@@ -39,7 +39,7 @@ export default function UserDetailPanel({user, currentUserId, onClose, onEdit, o
                         className="inline-flex items-center gap-1.5"><Phone size={14}
                                                                             className="text-slate-400"/> {user.phoneNumber}</span></DetailRow><DetailRow
                         label="Vai trò">{roleLabels[user.role]}</DetailRow><DetailRow
-                        label="Phòng ban">{user.departmentName || 'Không áp dụng'}</DetailRow><DetailRow
+                        label="Phòng ban">{user.departmentName || '—'}</DetailRow><DetailRow
                         label="Ngày tạo">{formatUserDate(user.createdAt, true)}</DetailRow><DetailRow
                         label="Cập nhật gần nhất">{formatUserDate(user.updatedAt, true)}</DetailRow></dl>
                 </section>

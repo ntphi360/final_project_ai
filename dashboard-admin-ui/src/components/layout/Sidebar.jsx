@@ -68,7 +68,7 @@ export default function Sidebar() {
           />
 
           <div className="brand-copy">
-            <strong>HỆ THỐNG QUẢN LÝ HỒ SƠ CÔNG</strong>
+            <strong>HỆ THỐNG GIÁM SÁT HỒ SƠ</strong>
             <span>Vì hành chính phục vụ</span>
           </div>
 

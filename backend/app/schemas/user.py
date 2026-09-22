@@ -120,5 +120,6 @@ class UserResponse(BaseModel):
     is_active: bool
     officer_id: int | None
     officer_name: str | None
+    department_name: str | None
     created_at: datetime
     updated_at: datetime

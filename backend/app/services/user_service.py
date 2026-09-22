@@ -29,20 +29,34 @@ class SelfLockError(Exception):
     pass
 
 
+def _userLoadOptions():
+    return (
+        joinedload(User.officer)
+        .selectinload(Officer.officer_assignments)
+        .joinedload(OfficerField.field)
+        .selectinload(Field.department_fields)
+        .joinedload(DepartmentField.department),
+    )
+
+
 def getUsers(db: Session) -> list[User]:
     return list(db.scalars(
-        select(User).options(joinedload(User.officer)).order_by(User.created_at.desc(), User.id.desc())
+        select(User).options(*_userLoadOptions()).order_by(User.created_at.desc(), User.id.desc())
     ).all())
 
 
 def getUserById(db: Session, userId: int) -> User | None:
     return db.scalar(
-        select(User).options(joinedload(User.officer)).where(User.id == userId)
+        select(User).options(*_userLoadOptions()).where(User.id == userId)
     )
 
 
 def getUserByEmail(db: Session, email: str) -> User | None:
-    return db.scalar(select(User).where(func.lower(User.email) == email.strip().lower()))
+    return db.scalar(
+        select(User)
+        .options(*_userLoadOptions())
+        .where(func.lower(User.email) == email.strip().lower())
+    )
 
 
 def authenticateUser(db: Session, email: str, password: str) -> User | None:

@@ -11,7 +11,7 @@ export function mapAuthUser(user) {
     isActive: user.is_active,
     officerId: user.officer_id,
     officerName: user.officer_name,
-    departmentName: user.officer_name,
+    departmentName: user.department_name,
     createdAt: user.created_at,
     updatedAt: user.updated_at,
   }
